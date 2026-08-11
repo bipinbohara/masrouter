@@ -1,4 +1,7 @@
-llm_profile = [
+from MAR.LLM.model_config import configured_llm_profile
+
+
+default_llm_profile = [
                 {'Name': 'gpt-4o-mini',
                  'Description': 'GPT-4o Mini is a smaller version of the GPT-4o language model, designed for faster inference and reduced memory usage. It retains the same capabilities as the full-size model, but with fewer parameters.\n\
                     The model costs $0.15 per million input tokens and $0.6 per million output tokens\n\
@@ -35,3 +38,5 @@ llm_profile = [
                     In Coding Benchmark HumanEval, deepseek-chat achieves an accuracy of 88.4.\n\
                     In Math Benchmark MATH, deepseek-chat achieves an accuracy of 85.1'},
                 ]
+
+llm_profile = configured_llm_profile() or default_llm_profile
