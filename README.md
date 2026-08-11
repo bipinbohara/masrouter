@@ -46,6 +46,38 @@ URL = "" # the URL of LLM backend
 KEY = "" # the key for API
 ```
 
+#### Multiple direct endpoints
+
+MasRouter can also connect each model to a different OpenAI-compatible
+endpoint without a gateway. Copy the included examples and fill in the API
+keys (use `not-required` for servers that do not enforce authentication):
+
+```bash
+cp template.env .env
+cp config.example.yaml config.yaml
+```
+
+Set `MASROUTER_MODEL_CONFIG="config.yaml"` in `.env`. Each `model_list` entry
+defines the public model name, routing description, upstream model identifier,
+endpoint, and API-key environment variable:
+
+```yaml
+model_list:
+  - model_name: example/model
+    tier: 0
+    description: A fast model for straightforward tasks.
+    litellm_params:
+      model: openai/example/model
+      api_base: http://model-server:80/v1
+      api_key: os.environ/EXAMPLE_MODEL_API_KEY
+```
+
+The leading `openai/` in `litellm_params.model` selects the OpenAI-compatible
+protocol and is removed before the model identifier is sent upstream. The
+configured entries automatically replace the built-in model profile. If no
+model configuration exists, MasRouter continues to use the shared `URL` and
+`KEY` settings and its built-in model list.
+
 ### 🐹 Run the code
 
 The code below verifies the experimental results of the `mbpp` dataset.

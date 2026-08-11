@@ -5,6 +5,7 @@ Datasets/MMLU/*
 register/
 
 .env
+config.yaml
 *.jsonl
 *.pth
 *.pyc

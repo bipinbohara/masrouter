@@ -11,6 +11,7 @@ from openai import OpenAI, AsyncOpenAI
 from MAR.LLM.price import cost_count
 from MAR.LLM.llm import LLM
 from MAR.LLM.llm_registry import LLMRegistry
+from MAR.LLM.model_config import route_for_model
 
 load_dotenv()
 MINE_BASE_URL = os.getenv('BASE_URL')
@@ -21,6 +22,12 @@ MINE_API_KEYS = os.getenv('API_KEY')
 class ALLChat(LLM):
     def __init__(self, model_name: str):
         self.model_name = model_name
+
+    def _connection(self):
+        route = route_for_model(self.model_name)
+        if route is not None:
+            return route.api_base, route.api_key, route.upstream_model
+        return os.environ.get("URL"), os.environ.get("KEY"), self.model_name
     
     @retry(wait=wait_random_exponential(max=100), stop=stop_after_attempt(10))
     def gen(
@@ -39,11 +46,11 @@ class ALLChat(LLM):
 
         if isinstance(messages, str):
             messages = [{'role':"user", 'content':messages}]
-        client = OpenAI(base_url = os.environ.get("URL"),
-                        api_key = os.environ.get("KEY"))
+        api_base, api_key, upstream_model = self._connection()
+        client = OpenAI(base_url=api_base, api_key=api_key)
         chat_completion = client.chat.completions.create(
         messages = messages,
-        model = self.model_name,
+        model = upstream_model,
         )
         response = chat_completion.choices[0].message.content
         prompt = "".join([item['content'] for item in messages])
@@ -68,11 +75,11 @@ class ALLChat(LLM):
         if isinstance(messages, str):
             messages = [{'role':"user", 'content':messages}]
         
-        client = AsyncOpenAI(base_url = os.environ.get("URL"),
-                             api_key = os.environ.get("KEY"),)
+        api_base, api_key, upstream_model = self._connection()
+        client = AsyncOpenAI(base_url=api_base, api_key=api_key)
         chat_completion = await client.chat.completions.create(
         messages = messages,
-        model = self.model_name,
+        model = upstream_model,
         max_tokens = max_tokens,
         temperature = temperature,
         )
