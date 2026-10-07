@@ -1,4 +1,4 @@
-llm_profile = [
+hosted_llm_profile = [
                 {'Name': 'gpt-4o-mini',
                  'Description': 'GPT-4o Mini is a smaller version of the GPT-4o language model, designed for faster inference and reduced memory usage. It retains the same capabilities as the full-size model, but with fewer parameters.\n\
                     The model costs $0.15 per million input tokens and $0.6 per million output tokens\n\
@@ -35,3 +35,18 @@ llm_profile = [
                     In Coding Benchmark HumanEval, deepseek-chat achieves an accuracy of 88.4.\n\
                     In Math Benchmark MATH, deepseek-chat achieves an accuracy of 85.1'},
                 ]
+
+
+def get_llm_profiles(tier=None):
+    """Use configured local models in every experiment, or the original hosted list."""
+    from MAR.LLM.local_config import load_local_models, local_profiles
+    models = load_local_models()
+    if models:
+        return local_profiles(models, tier)
+    if tier is not None:
+        raise ValueError('--llm_tier requires local model configuration')
+    return hosted_llm_profile
+
+
+# Preserve the public profile list for existing callers.
+llm_profile = get_llm_profiles()

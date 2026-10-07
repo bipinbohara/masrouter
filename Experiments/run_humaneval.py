@@ -16,7 +16,7 @@ from loguru import logger
 import torch.nn.functional as F
 
 from MAR.MasRouter.mas_router import MasRouter
-from MAR.LLM.llm_profile import llm_profile
+from MAR.LLM.llm_profile import get_llm_profiles
 from MAR.Agent.reasoning_profile import reasoning_profile
 from MAR.Prompts.tasks_profile import tasks_profile
 from MAR.Tools.reader.readers import JSONLReader
@@ -58,12 +58,15 @@ def parse_args():
     parser.add_argument('--start_epoch', type=int, default=0)
     parser.add_argument('--cost_rate', type=float, default=200.0)
     parser.add_argument('--max_agent', type=int, default=6)
+    parser.add_argument("--llm_tier", type=int, choices=[0, 1], default=None,
+                        help="Use only local tier 0 (small) or 1 (large); default uses both")
     args = parser.parse_args()
     return args
 
 
 if __name__ == '__main__':
     args = parse_args()
+    llms = get_llm_profiles(args.llm_tier)
     fix_random_seed(1234)
     dataset = JSONLReader().parse_file("Datasets/humaneval/humaneval-py.jsonl")
     train_dataset, test_dataset = split_list(dataset, 0.2)
@@ -75,7 +78,6 @@ if __name__ == '__main__':
     router = MasRouter(max_agent=args.max_agent,device=device).to(device)
     optimizer = torch.optim.Adam(router.parameters(), lr=args.lr)
     tasks = tasks_profile
-    llms = llm_profile
     reasonings = reasoning_profile
 
     logger.info("Start training...")
