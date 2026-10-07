@@ -51,7 +51,55 @@ KEY = "" # the key for API
 The code below verifies the experimental results of the `mbpp` dataset.
 
 ```bash
-python experiments/run_mbpp.py
+python Experiments/run_mbpp.py
+```
+
+### Locally hosted LLMs (OpenAI-compatible servers)
+
+Copy `template.local.env` to `.env` in the repository root. It contains the six
+model names and LAN endpoints for your configuration. Alternatively export the
+same variables in your shell; exported values take precedence over `.env`.
+
+```bash
+cp template.local.env .env
+python Experiments/run_mbpp.py --batch_size 1 --epochs 1
+# Run only the three small models (tier 0) or the three large models (tier 1):
+python Experiments/run_mbpp.py --llm_tier 0 --batch_size 1 --epochs 1
+python Experiments/run_mbpp.py --llm_tier 1 --batch_size 1 --epochs 1
+```
+
+All five experiment scripts support `--llm_tier`. Without it, the router selects
+among all configured local models. Tier membership is included in model profiles;
+these are candidate pools, not a new automatic escalation policy. Prepare the
+benchmark datasets and the existing experiment dependencies before running.
+The model embedding encoder still uses `sentence-transformers/all-MiniLM-L6-v2`
+(download or cache it beforehand for offline runs).
+
+`SMALL_MODEL_NAMES`, `SMALL_ENDPOINTS`, and `SMALL_API_KEYS` are aligned JSON arrays
+for tier 0. The corresponding `LARGE_*` arrays describe tier 1. Each name must be
+unique and match the model ID served at the corresponding `/v1` base URL. To use
+only one tier, set all three arrays of the other tier to `[]`. Invalid or partial
+configuration fails before experiment setup. When local configuration is present,
+unknown model names fail instead of making a hosted API request. With all six
+variables unset, the original hosted model profiles and `URL`/`KEY` behavior remain.
+
+Servers must implement `POST /v1/chat/completions` with OpenAI-compatible responses.
+Empty API keys are supported using a non-secret SDK placeholder (`local-no-key`);
+set a real key for servers requiring authentication. Both synchronous `gen` and
+asynchronous `agen` route to each model's own endpoint, forward temperature,
+completion count and token budget, and close their clients after use. The local
+default output budget is 4096 tokens; callers can override `max_tokens`.
+
+Reported server token usage updates the experiment counters. If usage is omitted,
+no tokens are estimated. Local requests incur zero hosted API cost, so the existing
+`--cost_rate` term does not penalize local compute; GPU/time costs are not measured.
+Run experiments on a machine that can reach these private LAN addresses.
+
+To test endpoint routing without GPUs, datasets, or your LAN servers:
+
+```bash
+python -m pip install openai python-dotenv class-registry tiktoken aiohttp requests groq tenacity "setuptools<81"
+python -m unittest discover -s tests -v
 ```
 
 ## 📚 Citation

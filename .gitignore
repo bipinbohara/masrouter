@@ -12,3 +12,5 @@ register/
 *.pptx
 *.zip
 settings.json
+work/
+__pycache__/
