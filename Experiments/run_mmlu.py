@@ -24,7 +24,6 @@ from MAR.Utils.utils import fix_random_seed
 from MAR.Utils.globals import Cost, PromptTokens, CompletionTokens
 from MAR.Utils.log import configure_logging
 from Datasets.mmlu_dataset import MMLUDataset
-from Datasets.MMLU.download import download
 from Datasets.math_dataset import MATH_get_predict
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -81,7 +80,6 @@ if __name__ == '__main__':
     configure_logging(log_name=log_file)
     total_solved, total_executed = (0, 0)
     
-    # download()
     dataset_train = MMLUDataset('dev')
     dataset_test = MMLUDataset('test')
 

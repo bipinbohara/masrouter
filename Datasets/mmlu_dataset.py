@@ -1,4 +1,5 @@
 import glob
+from pathlib import Path
 import pandas as pd
 from typing import Union, List, Literal, Any, Dict
 import numpy as np
@@ -11,7 +12,7 @@ class MMLUDataset(ABC):
 
         self._split = split
 
-        data_path = f"datasets/MMLU/data/{self._split}/"
+        data_path = Path(__file__).resolve().parent / 'MMLU' / 'data' / self._split
         self._total_df: pd.DataFrame = self._load_data(data_path)
 
     @staticmethod
@@ -25,7 +26,10 @@ class MMLUDataset(ABC):
 
         rng = np.random.default_rng(888)
 
-        csv_paths = glob.glob(data_path + "*.csv")
+        csv_paths = sorted(Path(data_path).glob('*.csv'))
+        if not csv_paths:
+            raise FileNotFoundError(f'No MMLU CSV files found in {data_path}. '
+                                    'Extract the MMLU dataset into Datasets/MMLU/data/.')
         csv_paths = sorted(csv_paths)
         print("Number of topics: ", len(csv_paths))
 
