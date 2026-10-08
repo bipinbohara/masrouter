@@ -69,8 +69,10 @@ python Experiments/run_mbpp.py --llm_tier 1 --batch_size 1 --epochs 1
 ```
 
 All five experiment scripts support `--llm_tier`. Without it, the router selects
-among all configured local models. Tier membership is included in model profiles;
-these are candidate pools, not a new automatic escalation policy. Prepare the
+among all configured local models. The router embeds the detailed Name/Description profiles you added in
+`MAR/LLM/llm_profile.py`, preserving their content and order. Endpoint configuration
+only connects those model names to servers. Optional tier filtering restricts the
+candidate pool; it does not change the learned routing policy. Prepare the
 benchmark datasets and the existing experiment dependencies before running.
 The model embedding encoder still uses `sentence-transformers/all-MiniLM-L6-v2`
 (download or cache it beforehand for offline runs).
@@ -81,7 +83,9 @@ unique and match the model ID served at the corresponding `/v1` base URL. To use
 only one tier, set all three arrays of the other tier to `[]`. Invalid or partial
 configuration fails before experiment setup. When local configuration is present,
 unknown model names fail instead of making a hosted API request. With all six
-variables unset, the original hosted model profiles and `URL`/`KEY` behavior remain.
+variables unset, the authored profile list is used with the existing `URL`/`KEY`
+client (for example, an OpenAI-compatible gateway exposing those model names).
+For direct access to the six independent servers, configure `.env` as above.
 
 Servers must implement `POST /v1/chat/completions` with OpenAI-compatible responses.
 Empty API keys are supported using a non-secret SDK placeholder (`local-no-key`);
@@ -99,7 +103,7 @@ To test endpoint routing without GPUs, datasets, or your LAN servers:
 
 ```bash
 python -m pip install openai python-dotenv class-registry tiktoken aiohttp requests groq tenacity "setuptools<81"
-python -m unittest discover -s tests -v
+python -m unittest discover -s MAR/tests -v
 ```
 
 ## 📚 Citation
