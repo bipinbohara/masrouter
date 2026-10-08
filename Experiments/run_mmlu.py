@@ -24,7 +24,7 @@ from MAR.Utils.utils import fix_random_seed
 from MAR.Utils.globals import Cost, PromptTokens, CompletionTokens
 from MAR.Utils.log import configure_logging
 from Datasets.mmlu_dataset import MMLUDataset
-from Datasets.MMLU.download import download
+#from Datasets.MMLU.download import download
 from Datasets.math_dataset import MATH_get_predict
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
