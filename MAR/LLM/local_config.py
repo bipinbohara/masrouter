@@ -51,18 +51,3 @@ def load_local_models():
     if not models:
         raise ValueError('Local configuration must contain at least one model')
     return models
-
-
-def local_profiles(models, tier=None):
-    if tier not in (None, 0, 1):
-        raise ValueError('Local model tier must be 0 or 1')
-    profiles = [
-        {'Name': model.name, 'Tier': model.tier,
-         'Description': f'{model.name} is a locally hosted {"small" if model.tier == 0 else "large"} '
-                        f'language model in tier {model.tier}. Hosted API token cost is zero; '
-                        'local compute costs and benchmark scores are not specified.'}
-        for model in models.values() if tier is None or model.tier == tier
-    ]
-    if not profiles:
-        raise ValueError(f'No local models configured for tier {tier}')
-    return profiles

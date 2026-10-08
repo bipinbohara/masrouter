@@ -18,7 +18,7 @@ from MAR.Utils.globals import Cost, PromptTokens, CompletionTokens
 
 VARIABLES = [f'{group}_{suffix}' for group in ('SMALL', 'LARGE')
              for suffix in ('MODEL_NAMES', 'ENDPOINTS', 'API_KEYS')]
-TEMPLATE = Path(__file__).resolve().parents[1] / 'template.local.env'
+TEMPLATE = Path(__file__).resolve().parents[2] / 'template.local.env'
 
 
 class ConfigFixture:
@@ -49,16 +49,26 @@ class LocalConfigTests(ConfigFixture, unittest.TestCase):
         for tier, group in enumerate(('SMALL', 'LARGE')):
             names = json.loads(os.environ[f'{group}_MODEL_NAMES'])
             endpoints = json.loads(os.environ[f'{group}_ENDPOINTS'])
-            self.assertEqual([p['Name'] for p in get_llm_profiles(tier)], names)
+            expected = [profile for profile in hosted_llm_profile if profile['Name'] in names]
+            self.assertEqual(get_llm_profiles(tier), expected)
             for name, endpoint in zip(names, endpoints):
                 model = models[name]
                 self.assertEqual((model.endpoint, model.api_key, model.tier), (endpoint, '', tier))
                 self.assertIsInstance(LLMRegistry.get(name), LocalChat)
         self.assertEqual(len(get_llm_profiles()), 6)
+        self.assertEqual(get_llm_profiles(), hosted_llm_profile)
         self.assertEqual(LLMRegistry.get().model_name, next(iter(models)))
         with self.assertRaisesRegex(ValueError, 'not configured'):
             LLMRegistry.get('gpt-4o-mini')
 
+    def test_missing_description_is_not_silently_replaced(self):
+        self.configure()
+        names = json.loads(os.environ['SMALL_MODEL_NAMES'])
+        names[0] = 'new/model'
+        os.environ['SMALL_MODEL_NAMES'] = json.dumps(names)
+        with self.assertRaisesRegex(ValueError, 'Add Name/Description profiles'):
+            get_llm_profiles()
+            
     def test_invalid_configuration(self):
         for variable, value in (
             ('SMALL_MODEL_NAMES', 'not json'),

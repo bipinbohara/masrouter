@@ -58,12 +58,13 @@ hosted_llm_profile = [
                     Additional reported results include 94.38 on HMMT Feb25 with tools, 61.07 average on TauBench V2, and 96.85/96.33/95.66 on RULER-500 at 128K/256K/512K; scores use NVIDIA\'s stated evaluation settings.\n\
                     Estimated L40S compute cost: $3.16 per hour ($75.84 per day or $2,306.80 per 730-hour month) using 4 GPUs at a reference price of $0.79 per L40S GPU-hour; storage, CPU, networking, and idle-capacity overhead are excluded.\n\
                     Model card: https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8'},
-                {'Name': 'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16',
-                 'Description': 'NVIDIA Nemotron 3 Nano is a 30B-parameter hybrid Mixture-of-Experts model with approximately 3B active parameters per token, distributed in BF16 precision.\n\
+                {'Name': 'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8',
+                 'Description': 'NVIDIA Nemotron 3 Nano is a 30B-parameter hybrid Mixture-of-Experts model with approximately 3B active parameters per token, served in FP8 precision.\n\
                     It uses a hybrid Mamba-Transformer architecture, is designed for reasoning and agentic workloads, and supports a context length of up to 1,048,576 tokens.\n\
                     The model scores 78.3 on MMLU-Pro, 73.0 on GPQA without tools, 68.3 on LiveCodeBench v6, and 71.5 on IFBench Prompt.\n\
                     Additional reported results include 89.1/99.2 on AIME25 without/with tools, 38.8 on SWE-Bench with OpenHands, 49.0 average on TauBench V2, and 92.9/91.3/86.3 on RULER-100 at 256K/512K/1M; scores use NVIDIA\'s stated evaluation settings.\n\
                     Estimated L40S compute cost: $1.58 per hour ($37.92 per day or $1,153.40 per 730-hour month) using 2 GPUs at a reference price of $0.79 per L40S GPU-hour; storage, CPU, networking, and idle-capacity overhead are excluded.\n\
+                    Benchmark results above refer to the BF16 model card; FP8 serving results may differ.\n\
                     Model card: https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16'},
                 {'Name': 'Qwen/Qwen3.5-122B-A10B-FP8',
                  'Description': 'Qwen3.5 122B-A10B is an FP8 Mixture-of-Experts vision-language model with 122B total parameters and approximately 10B active parameters per token.\n\
@@ -83,11 +84,22 @@ hosted_llm_profile = [
 
 
 def get_llm_profiles(tier=None):
-    """Use configured local models in every experiment, or the original hosted list."""
-    from MAR.LLM.local_config import load_local_models, local_profiles
+    """Keep the authored descriptions and order used by MasRouter's encoder."""
+    from MAR.LLM.local_config import load_local_models
+    if tier not in (None, 0, 1):
+        raise ValueError('Local model tier must be 0 or 1')
     models = load_local_models()
     if models:
-        return local_profiles(models, tier)
+        profiles_by_name = {profile['Name']: profile for profile in hosted_llm_profile}
+        missing = [name for name in models if name not in profiles_by_name]
+        if missing:
+            raise ValueError(f'Add Name/Description profiles in llm_profile.py for: {", ".join(missing)}')
+        profiles = [profile for profile in hosted_llm_profile
+                    if profile['Name'] in models and
+                    (tier is None or models[profile['Name']].tier == tier)]
+        if not profiles:
+            raise ValueError(f'No local models configured for tier {tier}')
+        return profiles
     if tier is not None:
         raise ValueError('--llm_tier requires local model configuration')
     return hosted_llm_profile
