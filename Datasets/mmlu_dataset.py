@@ -39,6 +39,9 @@ class MMLUDataset(ABC):
         for path in csv_paths:
             single_df = pd.read_csv(path, header=None,
                             names=names,encoding='utf-8')
+            single_df['subject'] = path.stem.removesuffix('_' + Path(data_path).name)
+            single_df['source_file'] = path.name
+            single_df['source_row'] = np.arange(len(single_df))
             total_df = pd.concat([total_df, single_df])
 
         total_df = total_df.reset_index(drop=True)

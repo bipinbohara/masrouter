@@ -22,6 +22,9 @@ from Datasets.math_dataset import load_math_dataset,MATH_is_correct,MATH_get_pre
 from MAR.Utils.log import configure_logging
 from loguru import logger
 
+from MAR.Experiment.runner import add_evaluation_arguments, validate_evaluation_arguments, run_test
+from MAR.Experiment.benchmarks import read_jsonl, training_jsonl
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def load_result(result_file):
@@ -56,21 +59,28 @@ def parse_args():
     parser.add_argument('--max_agent', type=int, default=6)
     parser.add_argument("--llm_tier", type=int, choices=[0, 1], default=None,
                         help="Use only local tier 0 (small) or 1 (large); default uses both")
+    add_evaluation_arguments(parser, "math")
     args = parser.parse_args()
+    validate_evaluation_arguments(parser, args, "math")
     return args
 
 
 if __name__ == '__main__':
     args = parse_args()
+    if args.mode == "test":
+        run_test("math", args)
+        sys.exit(0)
     llms = get_llm_profiles(args.llm_tier)
-    fix_random_seed(1234)
-    train_dataset = load_math_dataset("Datasets/MATH",split="train")
-    test_dataset = load_math_dataset("Datasets/MATH",split="test")
+    fix_random_seed(args.seed)
+    train_dataset = load_math_dataset(args.dataset_root,split="train")
     current_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     log_file = f"MATH_{current_time}.txt"
     configure_logging(log_name=log_file)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     router = MasRouter(max_agent=args.max_agent,device=device).to(device)
+    if args.checkpoint:
+        router.load_state_dict(torch.load(args.checkpoint, map_location=device, weights_only=True))
+    training_updates = 0
     optimizer = torch.optim.Adam(router.parameters(), lr=args.lr)
     tasks = tasks_profile
     reasonings = reasoning_profile
@@ -82,7 +92,7 @@ if __name__ == '__main__':
         logger.info(f"Epoch {epoch}",80*'-')
         total_solved, total_executed = (0, 0)
         if epoch < args.start_epoch:
-            router.load_state_dict(torch.load(f"math_router_epoch{epoch}.pth", map_location=torch.device('cuda')))
+            router.load_state_dict(torch.load(f"math_router_epoch{epoch}.pth", map_location=device))
             continue
         for i_batch in range(num_batches):
             logger.info(f"Batch {i_batch}",80*'-')
@@ -119,6 +129,7 @@ if __name__ == '__main__':
             loss = task_loss + answer_loss + vae_loss*0.001 # + adjust_loss
             loss.backward()
             optimizer.step()
+            training_updates += 1
             
             accuracy = total_solved / total_executed
             logger.info(f"Batch time {time.time() - start_ts:.3f}")
@@ -126,33 +137,6 @@ if __name__ == '__main__':
             logger.info(f"utilities:{utilities}")
         torch.save(router.state_dict(), f"math_router_epoch{epoch}_new.pth")
     logger.info("Finish training...")
-    logger.info("Start testing...")
-    total_solved, total_executed = (0, 0)
-    num_batches = int(len(test_dataset)/args.batch_size)
-
-    for i_batch in range(num_batches):
-        logger.info(f"Batch {i_batch}",80*'-')
-        start_ts = time.time()
-        current_batch = dataloader(test_dataset,args.batch_size,i_batch)
-        queries = [item['problem'] for item in current_batch]
-        answers = [item['solution'] for item in current_batch]
-        task_labels = [0 for _ in current_batch]
-        tasks_y = torch.tensor(task_labels).to(device)
-        results, costs, log_probs, tasks_probs, vae_loss, agents_num  = router.forward(queries, tasks, llms, reasonings, task_labels,prompt_file=args.prompt_file)
-
-        utilities = []
-        for result, true_answer, log_prob, cost in zip(results, answers, log_probs, costs):
-            predict_answer = MATH_get_predict(result)
-            is_solved = MATH_is_correct(predict_answer,true_answer)
-            total_solved = total_solved + is_solved
-            total_executed = total_executed + 1
-            utility = is_solved - cost * args.cost_rate
-            utilities.append(utility)
-            logger.debug(f"Predict: {predict_answer}")
-            logger.debug(f"Truth: {true_answer}")
-        
-        accuracy = total_solved / total_executed
-        logger.info(f"Batch time {time.time() - start_ts:.3f}")
-        logger.info(f"Accuracy: {accuracy}")
-        logger.info(f"utilities:{utilities}")
-    logger.info("Finish testing...")
+    final_checkpoint = f"math_router_epoch{args.epochs-1}_new.pth" if training_updates or args.start_epoch else args.checkpoint
+    run_test("math", args, router=router, training_updates=training_updates,
+             evaluated_checkpoint=final_checkpoint)

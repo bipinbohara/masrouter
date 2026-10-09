@@ -112,11 +112,19 @@ class LocalChatTests(ConfigFixture, unittest.TestCase):
         self.configure()
         self.requests = []
         captured = self.requests
+        self.failures = [0]
+        failures = self.failures
 
         class Handler(BaseHTTPRequestHandler):
             def do_POST(self):
                 payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
                 captured.append((self.path, self.headers.get('Authorization'), payload))
+                if failures[0]:
+                    failures[0] -= 1
+                    self.send_response(500)
+                    self.send_header('Content-Length', '0')
+                    self.end_headers()
+                    return
                 body = json.dumps({
                     'id': 'test', 'object': 'chat.completion', 'created': 0,
                     'model': payload['model'],
@@ -179,6 +187,30 @@ class LocalChatTests(ConfigFixture, unittest.TestCase):
             LocalChat._response(SimpleNamespace(choices=[choice], usage=None))
         with self.assertRaises(ValueError):
             LocalChat._response(SimpleNamespace(choices=[], usage=None))
+
+    def test_observed_sdk_retries_usage_and_final_node_sync_async(self):
+        from MAR.Experiment.trace import collect_traces, run_graph
+        node = SimpleNamespace(id='worker', role=SimpleNamespace(role='Scientist'),
+                               llm=LLMRegistry.get(), outputs=[])
+        final = SimpleNamespace(id='final', llm=LLMRegistry.get(), outputs=[])
+        def run(inputs, num_rounds):
+            node.outputs.append(node.llm.gen(inputs['query']))
+            final.outputs.append(asyncio.run(final.llm.agen(inputs['query'])))
+            return final.outputs, 0
+        graph = SimpleNamespace(nodes={'worker': node}, decision_node=final,
+                                reasoning_name='Debate', run=run)
+        self.failures[0] = 1
+        with collect_traces() as traces:
+            result = run_graph(graph, {'query': 'hello'}, 1)
+        self.assertEqual(result[0], ['answer 0'])
+        calls = traces[0]['calls']
+        self.assertEqual(len(calls), 2)
+        self.assertEqual([call['http_requests'] for call in calls], [2, 1])
+        self.assertEqual(calls[0]['usage']['prompt_tokens'], 11)
+        self.assertEqual(calls[1]['usage']['completion_tokens'], 7)
+        self.assertTrue(calls[1]['is_final_node'])
+        self.assertEqual(calls[0]['parameters']['max_tokens'], 4096)
+        self.assertNotIn('gen', vars(node.llm))
 
 
 if __name__ == '__main__':
