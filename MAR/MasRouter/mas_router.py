@@ -12,6 +12,7 @@ from MAR.Graph.graph import Graph
 from MAR.Utils.utils import get_kwargs, plot_embedding_heatmap, plot_row_similarity
 from MAR.Utils.globals import Cost
 from loguru import logger
+from MAR.Experiment.trace import run_graph
 
 class GFusion(nn.Module):
     def __init__(self, d_model:int=384):
@@ -160,7 +161,8 @@ class MasRouter(nn.Module):
             g = Graph(domain = task['Name'], llm_names = llm_names, agent_names = role_names, 
                       decision_method = "FinalRefer", prompt_file = prompt_file, reasoning_name=collab["Name"], **kwargs)
             self.g = g
-            final_result.append(g.run(inputs={"query":query}, num_rounds=kwargs["num_rounds"])[0][0])
+            #final_result.append(g.run(inputs={"query":query}, num_rounds=kwargs["num_rounds"])[0][0])
+            final_result.append(run_graph(g, inputs={"query":query}, num_rounds=kwargs["num_rounds"])[0][0])
             costs.append(Cost.instance().value - previous_cost)
 
         return final_result, costs, log_probs, tasks_probs, vae_loss, agent_num_float
