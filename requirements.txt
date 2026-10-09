@@ -30,3 +30,8 @@ openpyxl
 beautifulsoup4
 pylatexenc
 python-pptx
+
+# Official MBPP test parquet loader.
+pyarrow
+fsspec
+huggingface-hub
