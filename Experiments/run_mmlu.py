@@ -111,7 +111,7 @@ if __name__ == '__main__':
     log_file = f"mmlu_{current_time}.txt"
     configure_logging(log_name=log_file)
     total_solved, total_executed = (0, 0)
-
+    
     dataset_train = MMLUDataset('dev') if args.mode == 'train-test' else None
     dataset_test = MMLUDataset('test')
 
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     training_updates = 0
     if args.mode == 'train-test':
         logger.info("Start training...")
-
+    
         train_batch = min(40,len(dataset_train)//args.batch_size)
         for i_epoch in range(args.epochs):
             if i_epoch < args.start_epoch:
@@ -136,7 +136,7 @@ if __name__ == '__main__':
                 start_ts = time.time()
                 current_batch = dataloader(dataset_train, args.batch_size, i_batch)
                 current_batch = [{"task":dataset_train.record_to_input(record)["task"], "answer":dataset_train.record_to_target_answer(record)} for row, record in current_batch.iterrows()]
-
+            
                 queries = [item['task'] for item in current_batch]
                 answers = [item['answer'] for item in current_batch]
                 task_labels = [1 for _ in current_batch]
@@ -170,7 +170,7 @@ if __name__ == '__main__':
                 loss.backward()
                 optimizer.step()
                 training_updates += 1
-
+            
                 accuracy = total_solved / total_executed
                 logger.info(f"Batch time {time.time() - start_ts:.3f}")
                 logger.info(f"Accuracy: {accuracy}")

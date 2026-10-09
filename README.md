@@ -106,6 +106,64 @@ python -m pip install openai python-dotenv class-registry tiktoken aiohttp reque
 python -m unittest discover -s MAR/tests -v
 ```
 
+### Held-out evaluation for all five benchmarks
+
+All five runners default to `--mode test`, load only their designated evaluation
+data, and use the same incremental JSON/JSONL/Excel research export. Test-only mode
+never initializes an optimizer or partitions evaluation questions into training.
+Every record is evaluated unless `--max_tasks` is supplied.
+
+| Runner | Default evaluation source | Training behavior with `--mode train-test` |
+| --- | --- | --- |
+| `run_mmlu.py` | `Datasets/MMLU/data/test/*.csv` | Separate MMLU `dev` split |
+| `run_gsm8k.py` | `Datasets/gsm8k/test.jsonl` | Separate `train.jsonl`, or `--train_dataset_json` |
+| `run_math.py` | `Datasets/MATH/test/**/*.json` | Separate MATH `train/` directory |
+| `run_mbpp.py` | Hugging Face MBPP `full/test` split | Separate MBPP `full/train` split |
+| `run_humaneval.py` | Full `Datasets/humaneval/humaneval-py.jsonl` suite | No official training split; explicit disjoint `--train_dataset_json` required |
+
+`--dataset_json` overrides the official test JSONL for GSM8K, HumanEval, or MBPP.
+For GSM8K, supply a file containing the official test questions; the loader cannot
+infer an unlabeled file's provenance. The legacy `gsm8k.jsonl` is not silently
+repartitioned. For local MBPP JSONL, explicit split labels are respected; otherwise
+only official test task IDs 11–510 are selected. An unlabelled mixed MBPP file is
+therefore safe to use. `--dataset_root` overrides the MATH root (both train/test).
+Training inputs overlapping GSM8K/HumanEval evaluation questions are rejected;
+HumanEval task-ID overlaps are rejected too. MBPP import no longer downloads data
+as a side effect; its default loader requires the parquet/Hugging Face dependencies
+included in `requirements.txt`.
+
+Install dependencies, configure the local endpoints in `.env`, and run each
+benchmark with its corresponding trained router checkpoint:
+
+```bash
+python -m pip install -r requirements.txt
+python Experiments/run_gsm8k.py --checkpoint gsm8k_router_epoch0_newnew.pth --export_excel
+python Experiments/run_math.py --checkpoint math_router_epoch0_new.pth --export_excel
+python Experiments/run_mbpp.py --checkpoint mbpp_router_epoch0_new.pth --export_excel
+python Experiments/run_humaneval.py --checkpoint humaneval_router_epoch0.pth --export_excel
+python Experiments/run_mmlu.py --checkpoint mmlu_router_epoch0.pth --export_excel
+```
+
+Use checkpoint paths matching the trained run you intend to compare. For a brief
+setup check without weights, replace `--checkpoint ...` with
+`--allow_untrained --max_tasks 10`. This is explicitly an untrained baseline.
+`--llm_tier` and local endpoint routing work identically for every dataset.
+Output defaults to a unique `results/<benchmark>/<run>/experiment.json` directory;
+`--result_file results/<benchmark>/<custom-run>/experiment.json` sets an explicit
+path. `--export_excel` creates the Excel workbook alongside the JSON artifacts.
+`--batch_size` affects training only; test generation is measured one task at a time.
+
+GSM8K evaluation compares signed numeric answers; MATH retains the project's
+boxed-answer normalization/equivalence. MBPP executes its assertions. HumanEval
+invokes `check(entry_point)` on the generated full function or prompt plus function
+body. Code benchmarks record single-sample pass@1, not a multi-sample pass@k
+estimate; MBPP retains the project's prompt format that exposes its assertion
+list. Each coding task records the executed tests and grading details. The
+`--scoring_timeout` option controls the existing code executor's timeout in seconds.
+Generation timing (`task_seconds`) excludes grading; `scoring_seconds` and
+`total_wall_seconds` allow separate reporting. Routing policies and training loss
+remain unchanged; `train-test` retains the existing training objective.
+
 ### MMLU test evaluation and research exports
 
 MMLU `dev` is used only by the optional training mode; reported evaluation uses
