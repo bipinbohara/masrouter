@@ -1,0 +1,32 @@
+# Imported by the five experiment runners and their shared modules.
+torch
+sentence-transformers
+numpy
+pandas
+matplotlib
+seaborn
+loguru
+PyYAML
+shortuuid
+astunparse
+openai
+groq
+tiktoken
+tenacity
+aiohttp
+requests
+python-dotenv
+class-registry
+# The existing class-registry distribution imports pkg_resources.
+setuptools<81
+langchain-community
+wikipedia
+# Reader imports used by GSM8K and HumanEval; Excel export uses openpyxl.
+charset-normalizer
+python-docx
+Markdown
+PyPDF2
+openpyxl
+beautifulsoup4
+pylatexenc
+python-pptx

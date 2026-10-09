@@ -14,3 +14,4 @@ register/
 settings.json
 work/
 __pycache__/
+results/
