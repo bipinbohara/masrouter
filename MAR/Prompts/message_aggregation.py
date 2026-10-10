@@ -1,4 +1,5 @@
 import re
+from MAR.Experiment.trace import record_reuse
 from typing import Dict
 
 from MAR.Tools.coding.python_executor import execute_code_get_return
@@ -146,6 +147,7 @@ def inner_test(raw_inputs:Dict[str,str], spatial_info:Dict[str,Dict], temporal_i
             code = match.group(0).lstrip("```python\n").rstrip("\n```")
             is_solved, feedback, state = PyExecutor().execute(code, internal_tests, timeout=10)
             if is_solved:
+                record_reuse(id, 'spatial', internal_tests)
                 return is_solved, info['output']
     for id, info in temporal_info.items():
         match = re.search(pattern, info['output'], re.DOTALL|re.MULTILINE)
@@ -153,6 +155,7 @@ def inner_test(raw_inputs:Dict[str,str], spatial_info:Dict[str,Dict], temporal_i
             code = match.group(0).lstrip("```python\n").rstrip("\n```")
             is_solved, feedback, state = PyExecutor().execute(code, internal_tests, timeout=10)
             if is_solved:
+                record_reuse(id, 'temporal', internal_tests)
                 return is_solved, info['output']
     return False, ""
     

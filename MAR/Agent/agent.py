@@ -1,6 +1,7 @@
 from typing import Dict
 import json
 from loguru import logger
+from MAR.Experiment.trace import generation_phase, processing_stage
 
 from MAR.Agent.agent_registry import AgentRegistry
 from MAR.LLM.llm_registry import LLMRegistry
@@ -60,8 +61,10 @@ class Agent(Node):
         if passed:
             return response
         prompt = self._process_inputs(input, spatial_info, temporal_info, **kwargs)
-        response = self.llm.gen(prompt)
-        response = post_process(input, response, self.post_process)
+        with generation_phase("primary_reasoning"):
+            response = self.llm.gen(prompt)
+        with processing_stage("postprocess:" + str(self.post_process)):
+            response = post_process(input, response, self.post_process)
         logger.debug(f"Agent {self.id} Role: {self.role.role} LLM: {self.llm.model_name}")
         logger.debug(f"system prompt:\n {prompt[0]['content']}")
         logger.debug(f"user prompt:\n {prompt[1]['content']}")
@@ -103,7 +106,8 @@ class Agent(Node):
             system_prompt += f"Format requirements that must be followed:\n{post_format_prompt}"
             user_prompt = f"{query}\nThe initial thinking information is:\n{response} \n Please refer to the new format requirements when replying."
             prompt = [{'role':'system','content':system_prompt},{'role':'user','content':user_prompt}]
-            response = self.llm.gen(prompt)
+            with generation_phase("reflection" if self.reason == "Reflection" else "role_post_format"):
+                response = self.llm.gen(prompt)
             logger.debug(f"post system prompt:\n {system_prompt}")
             logger.debug(f"post user prompt:\n {user_prompt}")
             logger.debug(f"post response:\n {response}")
@@ -155,7 +159,8 @@ class FinalRefer(Node):
     
     def _execute(self, input, spatial_info, temporal_info, **kwargs):
         prompt = self._process_inputs(input, spatial_info, temporal_info, **kwargs)
-        response = self.llm.gen(prompt)
+        with generation_phase("final_aggregation"):
+            response = self.llm.gen(prompt)
         logger.debug(f"Final Refer Node LLM: {self.llm.model_name}")
         logger.debug(f"Final System Prompt:\n {prompt[0]['content']}")
         logger.debug(f"Final User Prompt:\n {prompt[1]['content']}")

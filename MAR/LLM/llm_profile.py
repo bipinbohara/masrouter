@@ -35,51 +35,187 @@ hosted_llm_profile = [
                 #     In Coding Benchmark HumanEval, deepseek-chat achieves an accuracy of 88.4.\n\
                 #     In Math Benchmark MATH, deepseek-chat achieves an accuracy of 85.1'},
 
-                 {'Name': 'openai/gpt-oss-120b',
-                 'Description': 'GPT-OSS 120B is an Apache 2.0-licensed text-only Mixture-of-Experts reasoning model from OpenAI with 117B total parameters and 5.1B active parameters per token.\n\
-                    It has a 131,072-token context window, configurable low, medium, and high reasoning effort, and native tool-use capabilities.\n\
-                    The Hugging Face checkpoint uses MXFP4 quantization for the MoE weights and is designed to fit on a single 80 GB GPU.\n\
-                    Hugging Face evaluations report SWE-bench Verified scores of 47.9, 52.6, and 62.4 at low, medium, and high reasoning effort, respectively; SWE-bench Pro is 16.2 and GPQA Diamond is 80.81.\n\
-                    Scores use the evaluation settings named above and should only be compared with matching benchmark versions, prompts, reasoning effort, and tool access.\n\
-                    Estimated L40S compute cost: $3.16 per hour ($75.84 per day or $2,306.80 per 730-hour month) using 4 GPUs at a reference price of $0.79 per L40S GPU-hour; storage, CPU, networking, and idle-capacity overhead are excluded.\n\
-                    Model card: https://huggingface.co/openai/gpt-oss-120b'},
-                {'Name': 'openai/gpt-oss-20b',
-                 'Description': 'GPT-OSS 20B is an Apache 2.0-licensed text-only Mixture-of-Experts reasoning model from OpenAI with 21B total parameters and 3.6B active parameters per token.\n\
-                    It has a 131,072-token context window, configurable low, medium, and high reasoning effort, and native tool-use capabilities.\n\
-                    The Hugging Face checkpoint uses MXFP4 quantization for the MoE weights and can run within 16 GB of memory.\n\
-                    Hugging Face evaluations report SWE-bench Verified scores of 37.4, 53.2, and 60.7 at low, medium, and high reasoning effort, respectively; GPQA Diamond is 58.59 without tools and 67.1 at medium reasoning effort with tools.\n\
-                    Scores use the evaluation settings named above and should only be compared with matching benchmark versions, prompts, reasoning effort, and tool access.\n\
-                    Estimated L40S compute cost: $1.58 per hour ($37.92 per day or $1,153.40 per 730-hour month) using 2 GPUs at a reference price of $0.79 per L40S GPU-hour; storage, CPU, networking, and idle-capacity overhead are excluded.\n\
-                    Model card: https://huggingface.co/openai/gpt-oss-20b'},
-                {'Name': 'nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8',
-                 'Description': 'NVIDIA Nemotron 3 Super is a 120B-parameter hybrid latent Mixture-of-Experts model with approximately 12B active parameters per token, distributed in FP8 precision.\n\
-                    It is a reasoning and agentic model with a hybrid Mamba-Transformer architecture and supports a context length of up to 1,048,576 tokens.\n\
-                    The FP8 model scores 83.63 on MMLU-Pro, 79.36 on GPQA without tools, 78.44 on LiveCodeBench v6 (2024-08 through 2025-05), and 72.32 on IFBench Prompt.\n\
-                    Additional reported results include 94.38 on HMMT Feb25 with tools, 61.07 average on TauBench V2, and 96.85/96.33/95.66 on RULER-500 at 128K/256K/512K; scores use NVIDIA\'s stated evaluation settings.\n\
-                    Estimated L40S compute cost: $3.16 per hour ($75.84 per day or $2,306.80 per 730-hour month) using 4 GPUs at a reference price of $0.79 per L40S GPU-hour; storage, CPU, networking, and idle-capacity overhead are excluded.\n\
-                    Model card: https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8'},
-                {'Name': 'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8',
-                 'Description': 'NVIDIA Nemotron 3 Nano is a 30B-parameter hybrid Mixture-of-Experts model with approximately 3B active parameters per token, served in FP8 precision.\n\
-                    It uses a hybrid Mamba-Transformer architecture, is designed for reasoning and agentic workloads, and supports a context length of up to 1,048,576 tokens.\n\
-                    The model scores 78.3 on MMLU-Pro, 73.0 on GPQA without tools, 68.3 on LiveCodeBench v6, and 71.5 on IFBench Prompt.\n\
-                    Additional reported results include 89.1/99.2 on AIME25 without/with tools, 38.8 on SWE-Bench with OpenHands, 49.0 average on TauBench V2, and 92.9/91.3/86.3 on RULER-100 at 256K/512K/1M; scores use NVIDIA\'s stated evaluation settings.\n\
-                    Estimated L40S compute cost: $1.58 per hour ($37.92 per day or $1,153.40 per 730-hour month) using 2 GPUs at a reference price of $0.79 per L40S GPU-hour; storage, CPU, networking, and idle-capacity overhead are excluded.\n\
-                    Benchmark results above refer to the BF16 model card; FP8 serving results may differ.\n\
-                    Model card: https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16'},
-                {'Name': 'Qwen/Qwen3.5-122B-A10B-FP8',
-                 'Description': 'Qwen3.5 122B-A10B is an FP8 Mixture-of-Experts vision-language model with 122B total parameters and approximately 10B active parameters per token.\n\
-                    It natively supports text, image, and video input, combines thinking and non-thinking modes, and has a 262,144-token native context window that can be extended to 1,010,000 tokens.\n\
-                    Text evaluations report 86.7 on MMLU-Pro, 86.6 on GPQA Diamond, 78.9 on LiveCodeBench v6, 76.1 on IFBench, 72.0 on SWE-bench Verified, and 79.5 on TAU2-Bench.\n\
-                    Vision-language evaluations report 83.9 on MMMU, 76.9 on MMMU-Pro, 86.2 on MathVision, 85.1 on RealWorldQA, and 83.9 on VideoMME without subtitles; scores use Qwen\'s stated evaluation settings.\n\
-                    Estimated L40S compute cost: $3.16 per hour ($75.84 per day or $2,306.80 per 730-hour month) using 4 GPUs at a reference price of $0.79 per L40S GPU-hour; storage, CPU, networking, and idle-capacity overhead are excluded.\n\
-                    Model card: https://huggingface.co/Qwen/Qwen3.5-122B-A10B-FP8'},
-                {'Name': 'Qwen/Qwen3.5-35B-A3B-FP8',
-                 'Description': 'Qwen3.5 35B-A3B is an FP8 Mixture-of-Experts vision-language model with 35B total parameters and approximately 3B active parameters per token.\n\
-                    It natively supports text, image, and video input, combines thinking and non-thinking modes, and has a 262,144-token native context window that can be extended to 1,010,000 tokens.\n\
-                    Text evaluations report 85.3 on MMLU-Pro, 84.2 on GPQA Diamond, 74.6 on LiveCodeBench v6, 70.2 on IFBench, 69.2 on SWE-bench Verified, and 81.2 on TAU2-Bench.\n\
-                    Vision-language evaluations report 81.4 on MMMU, 75.1 on MMMU-Pro, 83.9 on MathVision, 84.1 on RealWorldQA, and 82.5 on VideoMME without subtitles; scores use Qwen\'s stated evaluation settings.\n\
-                    Estimated L40S compute cost: $1.58 per hour ($37.92 per day or $1,153.40 per 730-hour month) using 2 GPUs at a reference price of $0.79 per L40S GPU-hour; storage, CPU, networking, and idle-capacity overhead are excluded.\n\
-                    Model card: https://huggingface.co/Qwen/Qwen3.5-35B-A3B-FP8'},  
+                {
+                    "Name": "openai/gpt-oss-20b",
+                    "Description": "openai/gpt-oss-20b is a compact open-weight, text-only Mixture-of-Experts reasoning model with 20.9B total parameters and 3.6B active parameters per token, designed for agentic workflows with instruction following, tool use, adjustable reasoning effort, full chain-of-thought, and Structured Outputs while being small enough to run on systems with as little as 16GB of memory.\n"
+                                "The deployment resource footprint for gpt-oss-20b is 2 NVIDIA L40S GPUs (96 GB aggregate GPU memory), 256 GB system memory, and 1 Intel Xeon Gold 6548Y+ CPU with 32 cores/64 threads.\n"
+                                "In General Q&A Benchmark MMLU, gpt-oss-20b achieves an accuracy of 85.3% at high reasoning effort.\n"
+                                "In General Q&A Benchmark MMLU-Pro, gpt-oss-20b achieves a score of 74.8%.\n"
+                                "In Multilingual Knowledge Benchmark MMMLU, gpt-oss-20b achieves an average accuracy of 75.7% at high reasoning effort.\n"
+                                "In Reasoning Benchmark GPQA Diamond (no tools), gpt-oss-20b achieves an accuracy of 71.5% at high reasoning effort.\n"
+                                "In Reasoning Benchmark GPQA Diamond (with tools), gpt-oss-20b achieves an accuracy of 74.2% at high reasoning effort.\n"
+                                "In Reasoning Benchmark Humanity's Last Exam (HLE, no tools), gpt-oss-20b achieves an accuracy of 10.9% at high reasoning effort.\n"
+                                "In Reasoning Benchmark Humanity's Last Exam (HLE, with tools), gpt-oss-20b achieves an accuracy of 17.3% at high reasoning effort.\n"
+                                "In Math Benchmark AIME 2024 (no tools), gpt-oss-20b achieves an accuracy of 92.1% at high reasoning effort.\n"
+                                "In Math Benchmark AIME 2024 (with tools), gpt-oss-20b achieves an accuracy of 96.0% at high reasoning effort.\n"
+                                "In Math Benchmark AIME 2025 (no tools), gpt-oss-20b achieves an accuracy of 91.7% at high reasoning effort.\n"
+                                "In Math Benchmark AIME 2025 (with tools), gpt-oss-20b achieves an accuracy of 98.7% at high reasoning effort.\n"
+                                "In Coding Benchmark SWE-Bench Verified, gpt-oss-20b achieves an accuracy of 60.7% at high reasoning effort.\n"
+                                "In Coding Benchmark Aider Polyglot, gpt-oss-20b achieves an accuracy of 34.2% at high reasoning effort.\n"
+                                "In Competitive Coding Benchmark Codeforces (no tools), gpt-oss-20b achieves an Elo rating of 2230 at high reasoning effort.\n"
+                                "In Competitive Coding Benchmark Codeforces (with tools), gpt-oss-20b achieves an Elo rating of 2516 at high reasoning effort.\n"
+                                "In Agentic Tool-Use Benchmark Tau-Bench Retail, gpt-oss-20b achieves an accuracy of 54.8% at high reasoning effort.\n"
+                                "In Agentic Tool-Use Benchmark Tau-Bench Airline, gpt-oss-20b achieves an accuracy of 38.0% at high reasoning effort.\n"
+                                "In Health Benchmark HealthBench, gpt-oss-20b achieves a score of 42.5% at high reasoning effort.\n"
+                                "In Health Benchmark HealthBench Hard, gpt-oss-20b achieves a score of 10.8% at high reasoning effort.\n"
+                                "In Health Benchmark HealthBench Consensus, gpt-oss-20b achieves a score of 82.6% at high reasoning effort."
+                    },
+                    {
+                        "Name": "openai/gpt-oss-120b",
+                        "Description": "openai/gpt-oss-120b is an open-weight, text-only Mixture-of-Experts reasoning model with 116.8B total parameters and 5.1B active parameters per token, designed for agentic workflows with strong instruction following, tool use, adjustable reasoning effort, full chain-of-thought, and Structured Outputs.\n"
+                                    "The deployment resource footprint for gpt-oss-120b is 4 NVIDIA L40S GPUs (192 GB aggregate GPU memory) and one complete compute node containing 512 GB system memory and 2 Intel Xeon Gold 6548Y+ CPUs, providing 64 physical cores/128 threads in total.\n"
+                                    "In General Q&A Benchmark MMLU, gpt-oss-120b achieves an accuracy of 90.0% at high reasoning effort.\n"
+                                    "In General Q&A Benchmark MMLU-Pro, gpt-oss-120b achieves a score of 80.8%.\n"
+                                    "In Multilingual Knowledge Benchmark MMMLU, gpt-oss-120b achieves an average accuracy of 81.3% at high reasoning effort.\n"
+                                    "In Reasoning Benchmark GPQA Diamond (no tools), gpt-oss-120b achieves an accuracy of 80.1% at high reasoning effort.\n"
+                                    "In Reasoning Benchmark GPQA Diamond (with tools), gpt-oss-120b achieves an accuracy of 80.9% at high reasoning effort.\n"
+                                    "In Reasoning Benchmark Humanity's Last Exam (HLE, no tools), gpt-oss-120b achieves an accuracy of 14.9% at high reasoning effort.\n"
+                                    "In Reasoning Benchmark Humanity's Last Exam (HLE, with tools), gpt-oss-120b achieves an accuracy of 19.0% at high reasoning effort.\n"
+                                    "In Math Benchmark AIME 2024 (no tools), gpt-oss-120b achieves an accuracy of 95.8% at high reasoning effort.\n"
+                                    "In Math Benchmark AIME 2024 (with tools), gpt-oss-120b achieves an accuracy of 96.6% at high reasoning effort.\n"
+                                    "In Math Benchmark AIME 2025 (no tools), gpt-oss-120b achieves an accuracy of 92.5% at high reasoning effort.\n"
+                                    "In Math Benchmark AIME 2025 (with tools), gpt-oss-120b achieves an accuracy of 97.9% at high reasoning effort.\n"
+                                    "In Coding Benchmark SWE-Bench Verified, gpt-oss-120b achieves an accuracy of 62.4% at high reasoning effort.\n"
+                                    "In Coding Benchmark Aider Polyglot, gpt-oss-120b achieves an accuracy of 44.4% at high reasoning effort.\n"
+                                    "In Competitive Coding Benchmark Codeforces (no tools), gpt-oss-120b achieves an Elo rating of 2463 at high reasoning effort.\n"
+                                    "In Competitive Coding Benchmark Codeforces (with tools), gpt-oss-120b achieves an Elo rating of 2622 at high reasoning effort.\n"
+                                    "In Agentic Tool-Use Benchmark Tau-Bench Retail, gpt-oss-120b achieves an accuracy of 67.8% at high reasoning effort.\n"
+                                    "In Agentic Tool-Use Benchmark Tau-Bench Airline, gpt-oss-120b achieves an accuracy of 49.2% at high reasoning effort.\n"
+                                    "In Health Benchmark HealthBench, gpt-oss-120b achieves a score of 57.6% at high reasoning effort.\n"
+                                    "In Health Benchmark HealthBench Hard, gpt-oss-120b achieves a score of 30.0% at high reasoning effort.\n"
+                                    "In Health Benchmark HealthBench Consensus, gpt-oss-120b achieves a score of 89.9% at high reasoning effort."
+                    },
+                    {
+                        "Name": "Qwen/Qwen3.5-35B-A3B-FP8",
+                        "Description": "Qwen3.5-35B-A3B-FP8 is an FP8-quantized multimodal Mixture-of-Experts model with 35B total parameters and 3B activated parameters per token, combining vision-language understanding, reasoning, coding, multilingual capabilities, tool use, and agentic functionality with a native 262K-token context window.\n"
+                                    "The deployment resource footprint for Qwen3.5-35B-A3B-FP8 is 4 NVIDIA L40S GPUs (192 GB aggregate GPU memory) and one complete compute node containing 512 GB system memory and 2 Intel Xeon Gold 6548Y+ CPUs, providing 64 physical cores/128 threads in total.\n"
+                                    "In General Q&A Benchmark MMLU-Pro, Qwen3.5-35B-A3B-FP8 achieves a score of 85.3.\n"
+                                    "In General Q&A Benchmark MMLU-Redux, Qwen3.5-35B-A3B-FP8 achieves a score of 93.3.\n"
+                                    "In General Q&A Benchmark C-Eval, Qwen3.5-35B-A3B-FP8 achieves a score of 90.2.\n"
+                                    "In General Reasoning Benchmark SuperGPQA, Qwen3.5-35B-A3B-FP8 achieves a score of 63.4.\n"
+                                    "In Instruction-Following Benchmark IFEval, Qwen3.5-35B-A3B-FP8 achieves a score of 91.9.\n"
+                                    "In Instruction-Following Benchmark IFBench, Qwen3.5-35B-A3B-FP8 achieves a score of 70.2.\n"
+                                    "In Instruction-Following Benchmark MultiChallenge, Qwen3.5-35B-A3B-FP8 achieves a score of 60.0.\n"
+                                    "In Long-Context Benchmark AA-LCR, Qwen3.5-35B-A3B-FP8 achieves a score of 58.5.\n"
+                                    "In Long-Context Benchmark LongBench v2, Qwen3.5-35B-A3B-FP8 achieves a score of 59.0.\n"
+                                    "In Reasoning Benchmark GPQA Diamond, Qwen3.5-35B-A3B-FP8 achieves a score of 84.2.\n"
+                                    "In Reasoning Benchmark Humanity's Last Exam with Chain-of-Thought (HLE w/ CoT), Qwen3.5-35B-A3B-FP8 achieves a score of 22.4.\n"
+                                    "In Math Benchmark HMMT February 2025, Qwen3.5-35B-A3B-FP8 achieves a score of 89.0.\n"
+                                    "In Math Benchmark HMMT November 2025, Qwen3.5-35B-A3B-FP8 achieves a score of 89.2.\n"
+                                    "In Coding Benchmark SWE-bench Verified, Qwen3.5-35B-A3B-FP8 achieves a score of 69.2.\n"
+                                    "In Coding Benchmark LiveCodeBench v6, Qwen3.5-35B-A3B-FP8 achieves a score of 74.6.\n"
+                                    "In Agentic Coding Benchmark Terminal Bench 2, Qwen3.5-35B-A3B-FP8 achieves a score of 40.5.\n"
+                                    "In Competitive Coding Benchmark CodeForces, Qwen3.5-35B-A3B-FP8 achieves an Elo rating of 2028.\n"
+                                    "In Coding Benchmark OJBench, Qwen3.5-35B-A3B-FP8 achieves a score of 36.0.\n"
+                                    "In Full-Stack Coding Benchmark FullStackBench English, Qwen3.5-35B-A3B-FP8 achieves a score of 58.1.\n"
+                                    "In Full-Stack Coding Benchmark FullStackBench Chinese, Qwen3.5-35B-A3B-FP8 achieves a score of 55.0.\n"
+                                    "In Agentic Tool-Use Benchmark BFCL-V4, Qwen3.5-35B-A3B-FP8 achieves a score of 67.3.\n"
+                                    "In Agentic Benchmark TAU2-Bench, Qwen3.5-35B-A3B-FP8 achieves a score of 81.2.\n"
+                                    "In Agentic Benchmark VITA-Bench, Qwen3.5-35B-A3B-FP8 achieves a score of 31.9.\n"
+                                    "In Agentic Planning Benchmark DeepPlanning, Qwen3.5-35B-A3B-FP8 achieves a score of 22.8.\n"
+                                    "In Search-Agent Benchmark HLE with tools, Qwen3.5-35B-A3B-FP8 achieves a score of 47.4.\n"
+                                    "In Search-Agent Benchmark BrowseComp, Qwen3.5-35B-A3B-FP8 achieves a score of 61.0.\n"
+                                    "In Search-Agent Benchmark BrowseComp-ZH, Qwen3.5-35B-A3B-FP8 achieves a score of 69.5.\n"
+                                    "In Search-Agent Benchmark WideSearch, Qwen3.5-35B-A3B-FP8 achieves a score of 57.1.\n"
+                                    "In Search-Agent Benchmark Seal-0, Qwen3.5-35B-A3B-FP8 achieves a score of 41.4.\n"
+                                    "In Multilingual Benchmark MMMLU, Qwen3.5-35B-A3B-FP8 achieves a score of 85.2.\n"
+                                    "In Multilingual Benchmark MMLU-ProX, Qwen3.5-35B-A3B-FP8 achieves a score of 81.0.\n"
+                                    "In Multilingual Benchmark NOVA-63, Qwen3.5-35B-A3B-FP8 achieves a score of 57.1.\n"
+                                    "In Multilingual Benchmark INCLUDE, Qwen3.5-35B-A3B-FP8 achieves a score of 79.7.\n"
+                                    "In Multilingual Commonsense Benchmark Global PIQA, Qwen3.5-35B-A3B-FP8 achieves a score of 86.6.\n"
+                                    "In Multilingual Math Benchmark PolyMATH, Qwen3.5-35B-A3B-FP8 achieves a score of 64.4.\n"
+                                    "In Multilingual Translation Benchmark WMT24++, Qwen3.5-35B-A3B-FP8 achieves a score of 76.3.\n"
+                                    "In Multilingual Instruction-Following Benchmark MAXIFE, Qwen3.5-35B-A3B-FP8 achieves a score of 86.6."
+                    },
+                    {
+                        "Name": "Qwen/Qwen3.5-122B-A10B-FP8",
+                        "Description": "Qwen3.5-122B-A10B-FP8 is a large FP8-quantized multimodal Mixture-of-Experts model with 122B total parameters and 10B activated parameters per token, providing advanced reasoning, coding, vision-language understanding, multilingual capabilities, tool use, and agentic functionality with a native 262K-token context window.\n"
+                                    "The deployment resource footprint for Qwen3.5-122B-A10B-FP8 is 2 NVIDIA L40S GPUs (96 GB aggregate GPU memory), 256 GB system memory, and 1 Intel Xeon Gold 6548Y+ CPU with 32 cores/64 threads.\n"
+                                    "In General Q&A Benchmark MMLU-Pro, Qwen3.5-122B-A10B-FP8 achieves a score of 86.7.\n"
+                                    "In General Q&A Benchmark MMLU-Redux, Qwen3.5-122B-A10B-FP8 achieves a score of 94.0.\n"
+                                    "In General Q&A Benchmark C-Eval, Qwen3.5-122B-A10B-FP8 achieves a score of 91.9.\n"
+                                    "In General Reasoning Benchmark SuperGPQA, Qwen3.5-122B-A10B-FP8 achieves a score of 67.1.\n"
+                                    "In Instruction-Following Benchmark IFEval, Qwen3.5-122B-A10B-FP8 achieves a score of 93.4.\n"
+                                    "In Instruction-Following Benchmark IFBench, Qwen3.5-122B-A10B-FP8 achieves a score of 76.1.\n"
+                                    "In Instruction-Following Benchmark MultiChallenge, Qwen3.5-122B-A10B-FP8 achieves a score of 61.5.\n"
+                                    "In Long-Context Benchmark AA-LCR, Qwen3.5-122B-A10B-FP8 achieves a score of 66.9.\n"
+                                    "In Long-Context Benchmark LongBench v2, Qwen3.5-122B-A10B-FP8 achieves a score of 60.2.\n"
+                                    "In Reasoning Benchmark GPQA Diamond, Qwen3.5-122B-A10B-FP8 achieves a score of 86.6.\n"
+                                    "In Reasoning Benchmark Humanity's Last Exam with Chain-of-Thought (HLE w/ CoT), Qwen3.5-122B-A10B-FP8 achieves a score of 25.3.\n"
+                                    "In Math Benchmark HMMT February 2025, Qwen3.5-122B-A10B-FP8 achieves a score of 91.4.\n"
+                                    "In Math Benchmark HMMT November 2025, Qwen3.5-122B-A10B-FP8 achieves a score of 90.3.\n"
+                                    "In Coding Benchmark SWE-bench Verified, Qwen3.5-122B-A10B-FP8 achieves a score of 72.0.\n"
+                                    "In Coding Benchmark LiveCodeBench v6, Qwen3.5-122B-A10B-FP8 achieves a score of 78.9.\n"
+                                    "In Agentic Coding Benchmark Terminal Bench 2, Qwen3.5-122B-A10B-FP8 achieves a score of 49.4.\n"
+                                    "In Competitive Coding Benchmark CodeForces, Qwen3.5-122B-A10B-FP8 achieves an Elo rating of 2100.\n"
+                                    "In Coding Benchmark OJBench, Qwen3.5-122B-A10B-FP8 achieves a score of 39.5.\n"
+                                    "In Full-Stack Coding Benchmark FullStackBench English, Qwen3.5-122B-A10B-FP8 achieves a score of 62.6.\n"
+                                    "In Full-Stack Coding Benchmark FullStackBench Chinese, Qwen3.5-122B-A10B-FP8 achieves a score of 58.7.\n"
+                                    "In Agentic Tool-Use Benchmark BFCL-V4, Qwen3.5-122B-A10B-FP8 achieves a score of 72.2.\n"
+                                    "In Agentic Benchmark TAU2-Bench, Qwen3.5-122B-A10B-FP8 achieves a score of 79.5.\n"
+                                    "In Agentic Benchmark VITA-Bench, Qwen3.5-122B-A10B-FP8 achieves a score of 33.6.\n"
+                                    "In Agentic Planning Benchmark DeepPlanning, Qwen3.5-122B-A10B-FP8 achieves a score of 24.1.\n"
+                                    "In Search-Agent Benchmark HLE with tools, Qwen3.5-122B-A10B-FP8 achieves a score of 47.5.\n"
+                                    "In Search-Agent Benchmark BrowseComp, Qwen3.5-122B-A10B-FP8 achieves a score of 63.8.\n"
+                                    "In Search-Agent Benchmark BrowseComp-ZH, Qwen3.5-122B-A10B-FP8 achieves a score of 69.9.\n"
+                                    "In Search-Agent Benchmark WideSearch, Qwen3.5-122B-A10B-FP8 achieves a score of 60.5.\n"
+                                    "In Search-Agent Benchmark Seal-0, Qwen3.5-122B-A10B-FP8 achieves a score of 44.1.\n"
+                                    "In Multilingual Benchmark MMMLU, Qwen3.5-122B-A10B-FP8 achieves a score of 86.7.\n"
+                                    "In Multilingual Benchmark MMLU-ProX, Qwen3.5-122B-A10B-FP8 achieves a score of 82.2.\n"
+                                    "In Multilingual Benchmark NOVA-63, Qwen3.5-122B-A10B-FP8 achieves a score of 58.6.\n"
+                                    "In Multilingual Benchmark INCLUDE, Qwen3.5-122B-A10B-FP8 achieves a score of 82.8.\n"
+                                    "In Multilingual Commonsense Benchmark Global PIQA, Qwen3.5-122B-A10B-FP8 achieves a score of 88.4.\n"
+                                    "In Multilingual Math Benchmark PolyMATH, Qwen3.5-122B-A10B-FP8 achieves a score of 68.9.\n"
+                                    "In Multilingual Translation Benchmark WMT24++, Qwen3.5-122B-A10B-FP8 achieves a score of 78.3.\n"
+                                    "In Multilingual Instruction-Following Benchmark MAXIFE, Qwen3.5-122B-A10B-FP8 achieves a score of 87.9."
+                    },
+                    {
+                        "Name": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8",
+                        "Description": "NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 is an FP8-quantized, text-only hybrid Mamba-2/Transformer Mixture-of-Experts reasoning model with 30B total parameters and approximately 3.5B active parameters per token, designed for reasoning, coding, instruction following, tool use, RAG, multilingual applications, and agentic workflows with configurable reasoning and support for context lengths up to 1M tokens.\n"
+                                    "The deployment resource footprint for NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 is 2 NVIDIA L40S GPUs (96 GB aggregate GPU memory), 256 GB system memory, and 1 Intel Xeon Gold 6548Y+ CPU with 32 physical cores/64 threads.\n"
+                                    "In General Q&A Benchmark MMLU-Pro, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 78.1.\n"
+                                    "In Math Benchmark AIME 2025 (no tools), NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 87.7.\n"
+                                    "In Math Benchmark AIME 2025 (with tools), NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 98.8.\n"
+                                    "In Reasoning Benchmark GPQA (no tools), NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 72.5.\n"
+                                    "In Reasoning Benchmark GPQA (with tools), NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 73.4.\n"
+                                    "In Coding Benchmark LiveCodeBench v6, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 67.6.\n"
+                                    "In Coding Benchmark SciCode (subtask), NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 31.9.\n"
+                                    "In Reasoning Benchmark Humanity's Last Exam (HLE, no tools), NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 10.3.\n"
+                                    "In Reasoning Benchmark Humanity's Last Exam (HLE, with tools), NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 14.3.\n"
+                                    "In Agentic Benchmark TauBench V2 Airline, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 44.8.\n"
+                                    "In Agentic Benchmark TauBench V2 Retail, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 55.6.\n"
+                                    "In Agentic Benchmark TauBench V2 Telecom, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 40.8.\n"
+                                    "In Agentic Benchmark TauBench V2 Average, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 47.0.\n"
+                                    "In Agentic Tool-Use Benchmark BFCL v4, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 53.2.\n"
+                                    "In Instruction-Following Benchmark IFBench, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 72.2.\n"
+                                    "In Long-Context Benchmark AA-LCR, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves a score of 36.1.\n"
+                                    "In Multilingual Benchmark MMLU-ProX, NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 achieves an average score of 59.6."
+                    },
+                    {
+                        "Name": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8",
+                        "Description": "NVIDIA-Nemotron-3-Super-120B-A12B-FP8 is a large FP8-quantized, text-only hybrid Latent Mixture-of-Experts reasoning model with 120B total parameters and 12B active parameters per token, combining Mamba-2, MoE, Attention, and Multi-Token Prediction layers for advanced reasoning, coding, tool use, RAG, long-context tasks, collaborative agents, and high-volume agentic workloads with configurable reasoning and support for context lengths up to 1M tokens.\n"
+                                    "The deployment resource footprint for NVIDIA-Nemotron-3-Super-120B-A12B-FP8 is 4 NVIDIA L40S GPUs (192 GB aggregate GPU memory) and one complete compute node containing 512 GB system memory and 2 Intel Xeon Gold 6548Y+ CPUs, providing 64 physical cores/128 threads in total.\n"
+                                    "In General Q&A Benchmark MMLU-Pro, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 83.63.\n"
+                                    "In Math Benchmark HMMT February 2025 (with tools), NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 94.38.\n"
+                                    "In Reasoning Benchmark GPQA (no tools), NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 79.36.\n"
+                                    "In Coding Benchmark LiveCodeBench v6, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 78.44.\n"
+                                    "In Coding Benchmark LiveCodeBench v5, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 80.99.\n"
+                                    "In Coding Benchmark SciCode (subtask), NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 41.38.\n"
+                                    "In Reasoning Benchmark Humanity's Last Exam (HLE, no tools), NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 17.42.\n"
+                                    "In Agentic Coding Benchmark Terminal Bench (hard subset), NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 26.04.\n"
+                                    "In Agentic Benchmark TauBench V2 Airline, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 56.25.\n"
+                                    "In Agentic Benchmark TauBench V2 Retail, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 63.05.\n"
+                                    "In Agentic Benchmark TauBench V2 Telecom, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 63.93.\n"
+                                    "In Agentic Benchmark TauBench V2 Average, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 61.07.\n"
+                                    "In Instruction-Following Benchmark IFBench, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 72.32.\n"
+                                    "In Instruction-Following Benchmark Scale AI Multi-Challenge, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 54.35.\n"
+                                    "In Chat and Instruction-Following Benchmark Arena-Hard-V2 (Hard Prompt), NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 76.06.\n"
+                                    "In Long-Context Benchmark AA-LCR, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 57.69.\n"
+                                    "In Long-Context Benchmark RULER-500 at 128K context, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 96.85.\n"
+                                    "In Long-Context Benchmark RULER-500 at 256K context, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 96.33.\n"
+                                    "In Long-Context Benchmark RULER-500 at 512K context, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves a score of 95.66.\n"
+                                    "In Multilingual Benchmark MMLU-ProX, NVIDIA-Nemotron-3-Super-120B-A12B-FP8 achieves an average score of 79.21."
+                    },
                 ]
 
 

@@ -74,6 +74,7 @@ def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpo
         commit, dirty = None, None
     metadata = {
         'benchmark': benchmark, 'split': 'test', 'protocol': dataset.protocol,
+        'inactive_test_arguments': ['lr', 'epochs', 'batch_size', 'cost_rate', 'num_rounds', 'decision_method'],
         'started_at': utc_now(), 'arguments': vars(args), 'git_commit': commit, 'git_dirty': dirty,
         'python': platform.python_version(), 'packages': {d.metadata['Name']: d.version for d in distributions()},
         'device': str(device), 'seed': args.seed, 'dataset_size': len(dataset),

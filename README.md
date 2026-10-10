@@ -267,3 +267,30 @@ Special thanks to the following repositories for their invaluable code and datas
 
 - [MapCoder](https://github.com/Md-Ashraful-Pramanik/MapCoder)
 - [GPTSwarm](https://github.com/metauto-ai/GPTSwarm).
+
+### Fine-grained multi-agent diagnostics
+
+New runs include `experiment.events.jsonl` plus `events_1` and `rounds_1` Excel
+sheets (large event tables are split across sheets). Node execution records show
+zero-based round index, one-based retry attempt, predecessor IDs, outputs, timing,
+and exceptions. Round records contain the actual spatial/temporal edges after
+cycle pruning. Every LLM call links to its node execution and identifies primary
+reasoning, role post-formatting, reflection, or final aggregation. Tool/postprocess
+stages and validated answer reuse are recorded separately. HTTP retries remain
+separate from graph/node retries. Node errors are summarized even when all LLM
+requests succeed. Completed-task event logs are appended incrementally.
+
+Routing records show the continuous/rounded agent count, configured maximum,
+selected roles/models, final model, and effective rounds source. The final model
+is the most frequent selected worker model; a tie uses the first encountered
+worker model. The original `get_kwargs` sets Debate to two rounds and other
+current modes to one; the legacy CLI `num_rounds` and `decision_method` arguments
+do not override these hard-coded graph decisions. New metadata explicitly lists
+arguments inactive during test evaluation. No routing or retry policy was changed.
+
+Without skips/retries, base calls are `workers * rounds + 1` for the final node.
+Role post-formatting/reflection adds calls, validated reuse can remove calls,
+and whole-node retries repeat successful requests if subsequent processing fails.
+Thus graph connectivity does not directly multiply API calls by its edge count.
+The new task summaries include phase counts, retry generation calls, node errors,
+validated reuse count, and the one-call-per-worker-round baseline for comparison.

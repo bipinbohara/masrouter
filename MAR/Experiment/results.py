@@ -28,7 +28,11 @@ class ResultWriter:
         if self.path.exists() or self.records_path.exists():
             raise FileExistsError(f'Results already exist: {self.path}; choose a new output path')
         self.metadata = metadata
+        self.events_path = self.path.with_suffix('.events.jsonl')
+        if self.events_path.exists():
+            raise FileExistsError(f'Event log already exists: {self.events_path}')
         self.records_path.touch(exist_ok=False)
+        self.events_path.touch(exist_ok=False)
         self.summary = {'total': 0, 'correct': 0, 'failed': 0, 'invalid_answers': 0,
                         'tasks_with_call_errors': 0, 'failed_llm_calls': 0, 'api_cost_usd': 0.,
                         'total_llm_calls': 0, 'graph_seconds': 0., 'task_seconds': 0.,
@@ -43,6 +47,12 @@ class ResultWriter:
         with self.records_path.open('a', encoding='utf-8') as stream:
             stream.write(json.dumps(record, ensure_ascii=False) + '\n')
             stream.flush()
+        with self.events_path.open('a', encoding='utf-8') as stream:
+            entries = [dict(call, event='llm_call') for call in record['calls']] + record.get('events', [])
+            for event in sorted(entries, key=lambda e: e.get('started_at', e.get('timestamp', ''))):
+                stream.write(json.dumps(dict(event, task_id=record['task_id']), ensure_ascii=False) + '\n')
+        self.summary['node_execution_errors'] = self.summary.get('node_execution_errors', 0) + record.get('node_execution_errors', 0)
+        self.summary['tasks_with_node_errors'] = self.summary.get('tasks_with_node_errors', 0) + int(record.get('node_execution_errors', 0) > 0)
         self.summary['total'] += 1
         self.summary['correct'] += int(record['correct'])
         self.summary['failed'] += int(record['status'] == 'error')
@@ -115,13 +125,13 @@ class ResultWriter:
                 if len(value) > 32767:
                     value = value[:32700] + ' [TRUNCATED: see JSON]'
             return value
-        tasks, agents, calls = [], [], []
+        tasks, agents, calls, events, rounds = [], [], [], [], []
         with self.records_path.open(encoding='utf-8') as stream:
             for line in stream:
                 record = json.loads(line)
-                tasks.append({key: cell(value) for key, value in record.items() if key not in ('agents', 'calls')})
-                for key, rows in (('agents', agents), ('calls', calls)):
-                    for row in record[key]:
+                tasks.append({key: cell(value) for key, value in record.items() if key not in ('agents', 'calls', 'events', 'rounds')})
+                for key, rows in (('agents', agents), ('calls', calls), ('events', events), ('rounds', rounds)):
+                    for row in record.get(key, []):
                         rows.append(dict(task_id=record['task_id'], **{k: cell(v) for k, v in row.items()}))
         with pd.ExcelWriter(self.path.with_suffix('.xlsx'), engine='openpyxl') as workbook:
             pd.DataFrame(tasks).to_excel(workbook, sheet_name='tasks', index=False)
@@ -130,5 +140,9 @@ class ResultWriter:
             for start in range(0, max(1, len(calls)), 1000000):
                 pd.DataFrame(calls[start:start+1000000]).to_excel(
                     workbook, sheet_name=f'calls_{start//1000000+1}', index=False)
+            for name, entries in (('events', events), ('rounds', rounds)):
+                for start in range(0, max(1, len(entries)), 1000000):
+                    pd.DataFrame(entries[start:start+1000000]).to_excel(
+                        workbook, sheet_name=f'{name}_{start//1000000+1}', index=False)
             pd.DataFrame([{'key': key, 'value': cell(value)} for key, value in self.report.items()
                           if key != 'tasks']).to_excel(workbook, sheet_name='run_summary', index=False)
