@@ -195,6 +195,7 @@ if __name__ == '__main__':
         commit, dirty = None, None
     test_directory = Path(__file__).resolve().parents[1] / 'Datasets/MMLU/data/test'
     metadata = {
+        'inactive_test_arguments': ['lr', 'epochs', 'batch_size', 'cost_rate', 'num_rounds', 'decision_method'],
         'started_at': utc_now(), 'arguments': vars(args), 'git_commit': commit, 'git_dirty': dirty,
         'python': platform.python_version(), 'device': str(device),
         'packages': {dist.metadata['Name']: dist.version for dist in distributions()},

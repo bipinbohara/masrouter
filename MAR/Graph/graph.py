@@ -6,6 +6,7 @@ import torch
 import asyncio
 
 from MAR.Graph.node import Node
+from MAR.Experiment.trace import execute_node, record_round
 from MAR.Utils.utils import find_mode
 from MAR.Agent.agent_registry import AgentRegistry
 
@@ -231,6 +232,7 @@ class Graph(ABC):
         for round in range(num_rounds):
             log_probs += self.construct_spatial_connection()
             log_probs += self.construct_temporal_connection(round)
+            record_round(self, round)
             
             in_degree = {node_id: len(node.spatial_predecessors) for node_id, node in self.nodes.items()}
             zero_in_degree_queue = [node_id for node_id, deg in in_degree.items() if deg == 0]
@@ -240,7 +242,7 @@ class Graph(ABC):
                 tries = 0
                 while tries < max_tries:
                     try:
-                        self.nodes[current_node_id].execute(inputs) # output is saved in the node.outputs
+                        execute_node(self.nodes[current_node_id], inputs, round, tries + 1) # output is saved in the node.outputs
                         break
                     except Exception as e:
                         print(f"Error during execution of node {current_node_id}: {e}")
@@ -254,7 +256,7 @@ class Graph(ABC):
             self.update_memory()
             
         self.connect_decision_node()
-        self.decision_node.execute(inputs)
+        execute_node(self.decision_node, inputs, None, final=True)
         final_answers = self.decision_node.outputs
         if len(final_answers) == 0:
             final_answers.append("No answer of the decision node")

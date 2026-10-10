@@ -147,7 +147,7 @@ class MasRouter(nn.Module):
 
         final_result = []
         costs = []
-        for query, task, llms, collab, roles in zip(queries, selected_tasks, selected_llms, selected_collabs, selected_roles):
+        for query_index, (query, task, llms, collab, roles) in enumerate(zip(queries, selected_tasks, selected_llms, selected_collabs, selected_roles)):
             previous_cost = Cost.instance().value
             kwargs = get_kwargs(collab['Name'], len(llms))
             llm_names = [llm['Name'] for llm in llms]
@@ -161,7 +161,16 @@ class MasRouter(nn.Module):
             g = Graph(domain = task['Name'], llm_names = llm_names, agent_names = role_names, 
                       decision_method = "FinalRefer", prompt_file = prompt_file, reasoning_name=collab["Name"], **kwargs)
             self.g = g
-            final_result.append(run_graph(g, inputs={"query":query}, num_rounds=kwargs["num_rounds"])[0][0])
+            final_result.append(run_graph(g, inputs={"query":query}, num_rounds=kwargs["num_rounds"], routing=lambda: {
+                "predicted_agent_count": float(agent_num_float[query_index][0]),
+                "selected_agent_count": int(agent_num_int[query_index][0]),
+                "max_agent": self.num_determiner.max_agent,
+                "agent_count_rule": "clamp(round(sigmoid(difficulty) * max_agent), 1, max_agent)",
+                "selected_roles": role_names, "selected_models": llm_names,
+                "final_model_rule": "most frequent worker model; ties select first encountered",
+                "final_model": g.final_llm_name,
+                "rounds_source": "get_kwargs(collaboration); CLI num_rounds is not used",
+            })[0][0])
             costs.append(Cost.instance().value - previous_cost)
 
         return final_result, costs, log_probs, tasks_probs, vae_loss, agent_num_float

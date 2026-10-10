@@ -231,3 +231,76 @@ class RunnerArgumentTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class FineGrainedTraceTests(unittest.TestCase):
+    def test_round_phase_and_node_retry_visible_when_llm_call_succeeds(self):
+        from MAR.Experiment.trace import execute_node, record_round, generation_phase, processing_stage
+        graph = FakeGraph()
+        node = graph.nodes['one']
+        for n in (node, graph.decision_node):
+            n.spatial_predecessors = []
+            n.temporal_predecessors = []
+            n.spatial_successors = []
+            n.temporal_successors = []
+        attempts = [0]
+        def worker(inputs):
+            attempts[0] += 1
+            with generation_phase('primary_reasoning'):
+                response = node.llm.gen(inputs['query'])
+            with processing_stage('postprocess:Wiki'):
+                if attempts[0] == 1:
+                    raise ValueError('tool failed after successful generation')
+            node.outputs = [response]
+            return node.outputs
+        node.execute = worker
+        def final(inputs):
+            graph.decision_node.outputs = [graph.decision_node.llm.gen(inputs['query'])]
+            return graph.decision_node.outputs
+        graph.decision_node.execute = final
+        def run(inputs, num_rounds):
+            record_round(graph, 0)
+            try:
+                execute_node(node, inputs, 0, 1)
+            except ValueError:
+                execute_node(node, inputs, 0, 2)
+            execute_node(graph.decision_node, inputs, None, final=True)
+            return graph.decision_node.outputs, 0
+        graph.run = run
+        with collect_traces() as traces:
+            run_graph(graph, {'query': 'q'}, 1, routing=lambda: {'selected_agent_count': 1})
+        trace = traces[0]
+        self.assertEqual(trace['routing']['selected_agent_count'], 1)
+        self.assertEqual(len(trace['rounds']), 1)
+        self.assertEqual([c['node_attempt'] for c in trace['calls']], [1,2,1])
+        self.assertEqual(trace['calls'][0]['phase'], 'primary_reasoning')
+        self.assertTrue(all(c['status'] == 'success' for c in trace['calls']))
+        nodes = [e for e in trace['events'] if e['event'] == 'node_execution']
+        self.assertEqual([e['status'] for e in nodes], ['error','success','success'])
+        stages = [e for e in trace['events'] if e['event'] == 'processing_stage']
+        self.assertIn('tool failed', stages[0]['error'])
+        self.assertEqual(nodes[0]['llm_calls'], 1)
+        self.assertEqual(trace['calls'][-1]['phase'], 'final_aggregation')
+
+    def test_validated_reuse_can_execute_without_a_generation_call(self):
+        from MAR.Experiment.trace import execute_node, record_reuse
+        graph = FakeGraph()
+        node = graph.nodes['one']
+        node.spatial_predecessors = []
+        node.temporal_predecessors = []
+        def execute(inputs):
+            record_reuse('previous_worker', 'temporal', ['assert True'])
+            node.outputs = ['reused']
+            return node.outputs
+        node.execute = execute
+        def run(inputs, num_rounds):
+            execute_node(node, inputs, 1)
+            graph.decision_node.outputs = ['reused']
+            return graph.decision_node.outputs, 0
+        graph.run = run
+        with collect_traces() as traces:
+            run_graph(graph, {'query':'q'}, 2)
+        self.assertEqual(len(traces[0]['calls']), 0)
+        reuse = [e for e in traces[0]['events'] if e['event'] == 'reuse_validated_answer'][0]
+        self.assertEqual(reuse['source_agent_id'], 'previous_worker')
+        self.assertEqual(reuse['round_index'], 1)
