@@ -69,6 +69,10 @@ def evaluate(router, dataset, writer, tasks, llms, reasonings, prompt_file, max_
                 record['call_phase_counts'] = dict(Counter(call.get('phase', 'unclassified') for call in record['calls']))
                 record['retry_generation_calls'] = sum((call.get('node_attempt') or 1) > 1 for call in record['calls'])
                 record['node_execution_errors'] = sum(e.get('event') == 'node_execution' and e.get('status') == 'error' for e in record.get('events', []))
+                executions = [e for e in record.get('events', []) if e.get('event') == 'node_execution']
+                record['workers_with_successful_execution'] = len({e['agent_id'] for e in executions if not e['is_final_node'] and e['status'] == 'success'})
+                record['worker_execution_failures'] = sum(not e['is_final_node'] and e['status'] == 'error' for e in executions)
+                record['final_model'] = next((a['model'] for a in record['agents'] if a['is_final_node']), None)
                 record['reused_answers'] = sum(e.get('event') == 'reuse_validated_answer' for e in record.get('events', []))
                 record['baseline_calls_if_one_per_worker_round'] = record['num_agents'] * record.get('num_rounds', 0) + 1
                 record['llm_seconds'] = sum(call['seconds'] for call in record['calls'])
