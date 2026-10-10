@@ -294,3 +294,86 @@ and whole-node retries repeat successful requests if subsequent processing fails
 Thus graph connectivity does not directly multiply API calls by its edge count.
 The new task summaries include phase counts, retry generation calls, node errors,
 validated reuse count, and the one-call-per-worker-round baseline for comparison.
+
+### Original design preservation audit and trained baselines
+
+The local-model adapter and experiment observer do not replace MasRouter's
+routing policy. A preservation check compares the core algorithm against the
+last original implementation revision, `e005f76`, before local-model support.
+Run it without PyTorch or an LLM server:
+
+```bash
+python -m unittest discover -s tests -p 'test_design_preservation.py' -v
+```
+
+The check fingerprints Python syntax trees, ignoring only named logging hooks,
+and checks every role JSON byte for byte. It covers the router and its training
+submodules, graph scheduler/retries, nodes, agent execution, embeddings,
+collaboration configuration, prompt aggregation, postprocessing, and reasoning
+and output-format definitions. These remain identical to the original. The
+manifest records the full upstream revision used for comparison. It does not
+claim identical model outputs: model profiles/endpoints, completion parameters,
+benchmark splits, grading and evaluation protocol are experiment settings.
+The local adapter uses a 4096-token completion budget; the original base class
+has an 81920 default, and the original synchronous ALLChat request actually
+omits that parameter. Local HTTP retries use the OpenAI SDK; the original
+ALLChat also has an outer Tenacity retry. These adapter differences should be
+reported in experiment methodology.
+
+A role can make more than one generation call per round even in Debate. For
+example, `Commonsense/Reflector.json` has `PostOutputFormat: Answer`, so it makes
+one primary call followed by another call to reflect and format the answer.
+Two Reflectors and one Historian in two rounds therefore make
+`2 * (2 + 2 + 1) + 1 = 11` calls; the final `+1` is FinalRefer. This behavior is
+present in the original implementation. Selected model lists in task exports
+contain unique names; use the agents sheet for assignment and multiplicity.
+
+**Use learned weights for a trained-router experiment.** A test run with
+`--allow_untrained` does no optimizer updates and is a random-router control.
+This repository does not include a pretrained router checkpoint. A compatible
+checkpoint supplied separately can be loaded directly with `--checkpoint`.
+Using weights trained with a different model pool is a transfer experiment,
+not evidence of training on the six local models.
+
+To train on separate data with the existing objective and then evaluate the
+full official test split using all configured local models, run from the
+repository root. The following one-epoch commands are starting examples;
+choose training duration/checkpoints using training/validation data rather
+than test accuracy. They can make many LLM requests.
+
+```bash
+# MMLU needs both Datasets/MMLU/data/dev/*.csv and test/*.csv.
+python Experiments/run_mmlu.py --mode train-test --epochs 1 --batch_size 16 --export_excel
+
+# GSM8K needs the official, disjoint train.jsonl and test.jsonl files.
+mkdir -p Datasets/gsm8k
+curl -fL https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/train.jsonl -o Datasets/gsm8k/train.jsonl
+python Experiments/run_gsm8k.py --mode train-test --epochs 1 --batch_size 16 --export_excel
+```
+
+These commands save `mmlu_router_epoch0.pth` and
+`gsm8k_router_epoch0_newnew.pth` respectively, and automatically run test
+inference with the just-trained router. For later inference with those weights:
+
+```bash
+python Experiments/run_mmlu.py --mode test --checkpoint mmlu_router_epoch0.pth --export_excel
+python Experiments/run_gsm8k.py --mode test --checkpoint gsm8k_router_epoch0_newnew.pth --export_excel
+```
+
+Do not add `--allow_untrained` to these commands. Keep `--max_agent` (default 6),
+model profiles, candidate pool/`--llm_tier`, and prompts consistent between
+training and evaluation. Omit `--max_tasks` for full test evaluation. Check the
+export metadata's checkpoint hash, evaluated checkpoint, and training updates;
+a separate test-only invocation has zero updates even when it loads learned
+weights. A checkpoint filename alone does not prove how its weights were trained.
+The existing `--start_epoch` behavior restores weights, not Adam optimizer state.
+
+The objective is still `task_loss + answer_loss + 0.001 * vae_loss`, with
+`utility = correct - cost * cost_rate`. Local API cost is zero, so its cost
+penalty is zero; local runtime is logged, and GPU cost is not measured.
+This is a trained local-model adaptation of the original objective, not a
+reproduction of the paper's hosted-model cost tradeoff. The optional
+agent-count adjustment loss remains commented out as in the original.
+Loading a checkpoint does not guarantee varied agent counts, unique roles,
+or deterministic routing: the original router samples VAE latents, roles and
+models even during evaluation. The logger observes these choices.

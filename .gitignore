@@ -16,3 +16,4 @@ work/
 __pycache__/
 
 results/
+tesmplate.local.env

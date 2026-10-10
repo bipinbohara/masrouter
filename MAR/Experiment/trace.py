@@ -136,6 +136,7 @@ def run_graph(graph, inputs, num_rounds, routing=None):
         for node, agent in zip([*graph.nodes.values(), graph.decision_node], trace['agents']):
             agent['outputs'] = list(node.outputs)
 
+
 @contextmanager
 def generation_phase(phase):
     token = _phase.set(phase)
@@ -213,3 +214,4 @@ def processing_stage(stage):
         raise
     finally:
         event.update(seconds=time.perf_counter()-start, finished_at=utc_now())
+

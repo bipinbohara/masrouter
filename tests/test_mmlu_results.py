@@ -304,3 +304,4 @@ class FineGrainedTraceTests(unittest.TestCase):
         reuse = [e for e in traces[0]['events'] if e['event'] == 'reuse_validated_answer'][0]
         self.assertEqual(reuse['source_agent_id'], 'previous_worker')
         self.assertEqual(reuse['round_index'], 1)
+
