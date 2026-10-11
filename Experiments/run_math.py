@@ -25,7 +25,7 @@ from loguru import logger
 from MAR.Experiment.runner import add_evaluation_arguments, validate_evaluation_arguments, run_test
 from MAR.Experiment.benchmarks import read_jsonl, training_jsonl
 
-from MAR.Experiment.training import limit_training_batch, training_limit_reached
+from MAR.Experiment.training import limit_training_batch, training_limit_reached, grade_training_answer
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -121,8 +121,11 @@ if __name__ == '__main__':
             answers_loss = []
             is_solved_list = []
             for result, true_answer, log_prob, cost in zip(results, answers, log_probs, costs):
-                predict_answer = MATH_get_predict(result)
-                is_solved = MATH_is_correct(predict_answer,true_answer)
+                grade = grade_training_answer("math", result, {"solution": true_answer})
+                predict_answer = grade["predicted_answer"]
+                is_solved = grade["correct"]
+                if grade.get("grading_error"):
+                    logger.warning(f"Training answer grading failed: {grade['grading_error']}")
                 total_solved = total_solved + is_solved
                 total_executed = total_executed + 1
                 utility = is_solved - cost * args.cost_rate

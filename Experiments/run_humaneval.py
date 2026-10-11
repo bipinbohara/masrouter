@@ -27,7 +27,7 @@ from MAR.Utils.log import configure_logging
 from MAR.Experiment.runner import add_evaluation_arguments, validate_evaluation_arguments, run_test
 from MAR.Experiment.benchmarks import read_jsonl, training_jsonl
 
-from MAR.Experiment.training import limit_training_batch, training_limit_reached
+from MAR.Experiment.training import limit_training_batch, training_limit_reached, grade_training_answer
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -123,14 +123,11 @@ if __name__ == '__main__':
             answers_loss = []
             is_solved_list = []
             pattern = r'```python.*```'
-            for query, result, test, log_prob, cost in zip(queries, results, tests, log_probs, costs):
-                match = re.search(pattern, result, re.DOTALL|re.MULTILINE)
-                if match:
-                    answer = match.group(0).lstrip("```python\n").rstrip("\n```")
-                    is_solved, _, _ = PyExecutor().execute(answer, [test], timeout=100)
-                else:
-                    answer = ""
-                    is_solved = 0
+            for query, result, test, log_prob, cost, item in zip(queries, results, tests, log_probs, costs, current_batch):
+                grade = grade_training_answer("humaneval", result, item, args.scoring_timeout)
+                is_solved = grade["correct"]
+                if grade.get("grading_error"):
+                    logger.warning(f"Training answer grading failed: {grade['grading_error']}")
                 total_solved = total_solved + is_solved
                 total_executed = total_executed + 1
                 utility = is_solved - cost * args.cost_rate

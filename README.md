@@ -422,3 +422,18 @@ epochs (including the new budget-limited epoch), so interruption before a save
 loses that epoch's in-memory progress. Use an existing saved checkpoint with
 `--checkpoint` if you want to initialize the new 50-example run from it; its
 budget counts new training examples only, and Adam optimizer state is not restored.
+### Invalid answers during training
+
+Training now uses the same benchmark answer checkers as test evaluation.
+MMLU extracts an A-D answer without indexing an empty parser result; GSM8K
+uses numeric exact match (including signs, decimals and thousands separators);
+MATH retains its normalized-answer equivalence checker; MBPP executes its
+assertions; HumanEval invokes `check(entry_point)` with its full test record.
+Empty/non-string answers are incorrect. Parser or code-grader exceptions score
+zero and emit a training warning instead of aborting optimizer updates.
+Interruptions, missing dependencies and memory exhaustion still propagate.
+The reward/loss formulas, routing and graph retries are unchanged. Training
+metadata records this grading protocol: improved grading can change reward
+labels compared with older checkpoints, especially GSM8K and HumanEval.
+A node/tool SyntaxError can still cause the original whole-node retries; answer
+checking does not repair that tool output or prevent its extra LLM calls.
