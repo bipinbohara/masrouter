@@ -16,7 +16,7 @@ from pathlib import Path
 from importlib.metadata import distributions
 from uuid import uuid4
 
-from MAR.Experiment.training import limit_training_batch, training_limit_reached
+from MAR.Experiment.training import limit_training_batch, training_limit_reached, grade_training_answer
 from MAR.Experiment.results import ResultWriter
 from MAR.Experiment.mmlu import evaluate
 from MAR.Experiment.trace import utc_now
@@ -161,8 +161,11 @@ if __name__ == '__main__':
                 answers_loss = []
                 is_solved_list = []
                 for query, result, answer, log_prob, cost in zip(queries, results, answers, log_probs, costs):
-                    predict_answer = MATH_get_predict(result)[0]
-                    is_solved = str(predict_answer).strip()==str(answer).strip()
+                    grade = grade_training_answer("mmlu", result, {"answer": answer})
+                    predict_answer = grade["predicted_answer"]
+                    is_solved = grade["correct"]
+                    if grade.get("grading_error"):
+                        logger.warning(f"Training answer grading failed: {grade['grading_error']}")
                     total_solved = total_solved + is_solved
                     total_executed = total_executed + 1
                     utility = is_solved - cost * args.cost_rate
@@ -228,6 +231,7 @@ if __name__ == '__main__':
         'router_initialization': 'checkpoint' if args.checkpoint else 'random',
         'trained_on_dev_this_run': training_updates > 0, 'training_updates': training_updates, 'training_samples': training_samples,
         'training_sample_limit': args.max_train_samples,
+        'training_grading': 'Same benchmark checker as test; invalid output scores zero; grader exceptions logged',
         'resumed_checkpoint': f'mmlu_router_epoch{args.start_epoch-1}.pth' if args.start_epoch else None,
         'evaluated_checkpoint': final_checkpoint,
         'evaluated_checkpoint_sha256': digest(final_checkpoint) if final_checkpoint else None,

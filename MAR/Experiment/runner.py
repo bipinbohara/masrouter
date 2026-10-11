@@ -87,6 +87,7 @@ def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpo
         'checkpoint': checkpoint, 'checkpoint_sha256': sha256(checkpoint) if checkpoint else None,
         'router_initialization': 'checkpoint' if checkpoint else 'random', 'training_updates': training_updates, 'training_samples': training_samples,
         'training_sample_limit': args.max_train_samples,
+        'training_grading': 'Same benchmark checker as test; invalid output scores zero; grader exceptions logged',
         'trained_on_separate_data_this_run': training_updates > 0, 'evaluation_batch_size': 1,
         'llm_profiles': llms, 'reasoning_profiles': reasoning_profile, 'prompt_sha256': sha256(args.prompt_file),
         'local_models': [{'name': m.name, 'endpoint': m.endpoint, 'tier': m.tier} for m in load_local_models().values()],
