@@ -28,6 +28,8 @@ from Datasets.mbpp_dataset import MbppDataset, MbppDataLoader
 from MAR.Experiment.runner import add_evaluation_arguments, validate_evaluation_arguments, run_test
 from MAR.Experiment.benchmarks import read_jsonl, training_jsonl
 
+from MAR.Experiment.training import limit_training_batch, training_limit_reached
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def load_result(result_file):
@@ -45,7 +47,7 @@ def dataloader(data_list, batch_size, i_batch):
 def load_config(config_path):
     with open(config_path, 'r',encoding='utf-8') as file:
         return yaml.safe_load(file)
-    
+
 def parse_args():
     parser = argparse.ArgumentParser(description="AgentPrune Experiments on mbpp")
     parser.add_argument("--dataset_json", type=str, default=None, help="Official test JSONL file override")
@@ -87,19 +89,27 @@ if __name__ == '__main__':
     if args.checkpoint:
         router.load_state_dict(torch.load(args.checkpoint, map_location=device, weights_only=True))
     training_updates = 0
+    training_samples = 0
+    final_checkpoint = args.checkpoint
     optimizer = torch.optim.Adam(router.parameters(), lr=args.lr)
     tasks = tasks_profile
     reasonings = reasoning_profile
     logger.info("Start training...")
-    
+
     for epoch in range(args.epochs):
+        if training_limit_reached(args, training_samples):
+            break
         logger.info(f"Epoch {epoch}",80*'-')
         total_solved, total_executed = (0, 0)
         train_loader = MbppDataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         if epoch < args.start_epoch:
             router.load_state_dict(torch.load(f"mbpp_router_epoch{epoch}_new.pth", map_location=device))
+            final_checkpoint = f"mbpp_router_epoch{epoch}_new.pth"
             continue
         for i_batch, current_batch in enumerate(train_loader):
+            current_batch = limit_training_batch(current_batch, args, training_samples)
+            if not len(current_batch):
+                break
             logger.info(f"Batch {i_batch}",80*'-')
             start_ts = time.time()
             queries = [item['task'] for item in current_batch]
@@ -108,7 +118,7 @@ if __name__ == '__main__':
             tasks_y = torch.tensor(task_labels).to(device)
             optimizer.zero_grad()
             results, costs, log_probs, tasks_probs, vae_loss, agents_num = router.forward(queries, tasks, llms, reasonings, task_labels, prompt_file=args.prompt_file)
-            
+
             task_loss = F.cross_entropy(tasks_probs, tasks_y)
             utilities = []
             answers_loss = []
@@ -132,18 +142,20 @@ if __name__ == '__main__':
             vae_loss = vae_loss.mean()
             is_solved_tensor = torch.tensor(is_solved_list, dtype=torch.float32, device=device).unsqueeze(1)  # shape: [N, 1]
             adjust_loss = ((1 - is_solved_tensor) * (router.num_determiner.max_agent - agents_num) + 0.25 * is_solved_tensor *  agents_num).mean()
-            
+
             loss = task_loss + answer_loss + vae_loss*0.001 # + adjust_loss
             loss.backward()
             optimizer.step()
             training_updates += 1
+            training_samples += len(current_batch)
+            logger.info(f"Training samples completed: {training_samples}/{args.max_train_samples or 'unlimited'}")
             accuracy = total_solved / total_executed
 
             logger.info(f"Batch time {time.time() - start_ts:.3f}")
             logger.info(f"Accuracy: {accuracy}")
             logger.info(f"utilities:{utilities}")
-        torch.save(router.state_dict(), f"mbpp_router_epoch{epoch}_new.pth")
+        final_checkpoint = f"mbpp_router_epoch{epoch}_new.pth"
+        torch.save(router.state_dict(), final_checkpoint)
     logger.info("End training...")
-    final_checkpoint = f"mbpp_router_epoch{args.epochs-1}_new.pth" if training_updates or args.start_epoch else args.checkpoint
     run_test("mbpp", args, router=router, training_updates=training_updates,
-             evaluated_checkpoint=final_checkpoint)
+             evaluated_checkpoint=final_checkpoint, training_samples=training_samples)

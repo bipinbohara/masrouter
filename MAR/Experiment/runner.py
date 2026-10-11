@@ -17,6 +17,8 @@ def add_evaluation_arguments(parser, benchmark):
     parser.add_argument('--checkpoint', help='Trained router state_dict for evaluation or initialization')
     parser.add_argument('--allow_untrained', action='store_true')
     parser.add_argument('--max_tasks', type=int, default=None)
+    parser.add_argument('--max_train_samples', type=int, default=50,
+                        help='Total training examples across epochs; default 50, 0 disables the limit')
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--export_excel', action='store_true')
     parser.add_argument('--scoring_timeout', type=int, default=100)
@@ -30,6 +32,8 @@ def add_evaluation_arguments(parser, benchmark):
 def validate_evaluation_arguments(parser, args, benchmark):
     if args.batch_size < 1 or args.epochs < 0 or args.max_agent < 1 or args.scoring_timeout < 1:
         parser.error('batch_size, max_agent and scoring_timeout must be positive; epochs must be nonnegative')
+    if args.max_train_samples < 0:
+        parser.error('max_train_samples must be nonnegative (0 means unlimited)')
     if args.max_tasks is not None and args.max_tasks < 1:
         parser.error('max_tasks must be positive')
     if not 0 <= args.start_epoch <= args.epochs:
@@ -47,7 +51,7 @@ def validate_evaluation_arguments(parser, args, benchmark):
         import openpyxl
 
 
-def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpoint=None):
+def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpoint=None, training_samples=0):
     import torch
     from MAR.MasRouter.mas_router import MasRouter
     from MAR.LLM.llm_profile import get_llm_profiles
@@ -74,14 +78,15 @@ def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpo
         commit, dirty = None, None
     metadata = {
         'benchmark': benchmark, 'split': 'test', 'protocol': dataset.protocol,
-        'inactive_test_arguments': ['lr', 'epochs', 'batch_size', 'cost_rate', 'num_rounds', 'decision_method'],
+        'inactive_test_arguments': ['lr', 'epochs', 'batch_size', 'cost_rate', 'num_rounds', 'decision_method', 'max_train_samples'],
         'started_at': utc_now(), 'arguments': vars(args), 'git_commit': commit, 'git_dirty': dirty,
         'python': platform.python_version(), 'packages': {d.metadata['Name']: d.version for d in distributions()},
         'device': str(device), 'seed': args.seed, 'dataset_size': len(dataset),
         'requested_tasks': min(args.max_tasks or len(dataset), len(dataset)),
         'dataset_sha256': dataset.sources, 'evaluation_order': 'Source file/record order',
         'checkpoint': checkpoint, 'checkpoint_sha256': sha256(checkpoint) if checkpoint else None,
-        'router_initialization': 'checkpoint' if checkpoint else 'random', 'training_updates': training_updates,
+        'router_initialization': 'checkpoint' if checkpoint else 'random', 'training_updates': training_updates, 'training_samples': training_samples,
+        'training_sample_limit': args.max_train_samples,
         'trained_on_separate_data_this_run': training_updates > 0, 'evaluation_batch_size': 1,
         'llm_profiles': llms, 'reasoning_profiles': reasoning_profile, 'prompt_sha256': sha256(args.prompt_file),
         'local_models': [{'name': m.name, 'endpoint': m.endpoint, 'tier': m.tier} for m in load_local_models().values()],

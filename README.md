@@ -377,3 +377,48 @@ agent-count adjustment loss remains commented out as in the original.
 Loading a checkpoint does not guarantee varied agent counts, unique roles,
 or deterministic routing: the original router samples VAE latents, roles and
 models even during evaluation. The logger observes these choices.
+
+### Short training runs (50 examples)
+
+All five `--mode train-test` runners now default to `--max_train_samples 50`.
+This is a **total budget across all epochs in this invocation**, counting each
+example used in an optimizer update. It is not 50 per epoch or 50 batches.
+A repeated example in another epoch counts again. If the dataset/epoch schedule
+contains fewer examples, training stops below the requested maximum.
+The last batch is trimmed to the remaining budget (16 + 16 + 16 + 2 = 50 for
+batch size 16); partial dataset batches are also included. The existing MMLU
+40-batch-per-epoch ceiling remains. Set `--max_train_samples 0` for no sample
+budget, or any positive integer for a different limit.
+
+At the limit the current epoch checkpoint is saved, further epochs are skipped,
+and the existing test evaluation starts with those trained weights. Exports
+record `training_samples`, `training_sample_limit`, optimizer update count and
+the actual saved checkpoint/hash. Epoch labels still refer to the epoch in which
+training stopped; they do not imply a complete pass over the training data.
+A 50-example checkpoint is a pilot baseline, not evidence of convergence.
+Router logic, prompts and reward/loss equations remain unchanged.
+
+For a first GSM8K experiment with 50 training examples and 50 test questions:
+
+```bash
+python Experiments/run_gsm8k.py --mode train-test --epochs 1 \
+  --batch_size 16 --max_train_samples 50 --max_tasks 50 --export_excel
+```
+
+This saves `gsm8k_router_epoch0_newnew.pth` **before** testing. To test more
+questions later without retraining:
+
+```bash
+python Experiments/run_gsm8k.py --mode test \
+  --checkpoint gsm8k_router_epoch0_newnew.pth --max_tasks 500 --export_excel
+```
+
+The training limit does not restrict testing: `--max_tasks` is the separate test
+limit; omitting it evaluates the full test split. Every training example still
+runs its selected multi-agent graph, so the sample budget is not a wall-time
+limit. An already running Python process will not pick up these changes; stop
+it and restart with the new command. The existing runner saves only completed
+epochs (including the new budget-limited epoch), so interruption before a save
+loses that epoch's in-memory progress. Use an existing saved checkpoint with
+`--checkpoint` if you want to initialize the new 50-example run from it; its
+budget counts new training examples only, and Adam optimizer state is not restored.
