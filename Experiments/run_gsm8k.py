@@ -25,6 +25,8 @@ from loguru import logger
 from MAR.Experiment.runner import add_evaluation_arguments, validate_evaluation_arguments, run_test
 from MAR.Experiment.benchmarks import read_jsonl, training_jsonl
 
+from MAR.Experiment.training import limit_training_batch, training_limit_reached
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def load_result(result_file):
@@ -84,22 +86,30 @@ if __name__ == '__main__':
     if args.checkpoint:
         router.load_state_dict(torch.load(args.checkpoint, map_location=device, weights_only=True))
     training_updates = 0
+    training_samples = 0
+    final_checkpoint = args.checkpoint
     optimizer = torch.optim.Adam(router.parameters(), lr=args.lr)
     tasks = tasks_profile
     reasonings = reasoning_profile
 
     logger.info("Start training...")
-    train_batches = int(len(train_dataset)/args.batch_size)
+    train_batches = (len(train_dataset) + args.batch_size - 1) // args.batch_size
     for epoch in range(args.epochs):
+        if training_limit_reached(args, training_samples):
+            break
         logger.info(f"Epoch {epoch}",80*'-')
         total_solved, total_executed = (0, 0)
         if epoch < args.start_epoch:
             router.load_state_dict(torch.load(f"gsm8k_router_epoch{epoch}_newnew.pth", map_location=device))
+            final_checkpoint = f"gsm8k_router_epoch{epoch}_newnew.pth"
             continue
         for i_batch in range(train_batches):
             logger.info(f"Batch {i_batch}",80*'-')
             start_ts = time.time()
             current_batch = dataloader(train_dataset, args.batch_size,i_batch)
+            current_batch = limit_training_batch(current_batch, args, training_samples)
+            if not len(current_batch):
+                break
             queries = [item['task'] for item in current_batch]
             answers = [item['answer'] for item in current_batch]
             task_labels = [0 for _ in current_batch]
@@ -132,6 +142,8 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
             training_updates += 1
+            training_samples += len(current_batch)
+            logger.info(f"Training samples completed: {training_samples}/{args.max_train_samples or 'unlimited'}")
 
             accuracy = total_solved / total_executed
             logger.info(f"Batch time {time.time() - start_ts:.3f}")
@@ -139,9 +151,9 @@ if __name__ == '__main__':
             logger.info(f"utilities:{utilities}")
 
         logger.info(f"Epoch {epoch} Finishes",80*'-')
-        torch.save(router.state_dict(), f"gsm8k_router_epoch{epoch}_newnew.pth")
+        final_checkpoint = f"gsm8k_router_epoch{epoch}_newnew.pth"
+        torch.save(router.state_dict(), final_checkpoint)
 
     logger.info("Finish training...")
-    final_checkpoint = f"gsm8k_router_epoch{args.epochs-1}_newnew.pth" if training_updates or args.start_epoch else args.checkpoint
     run_test("gsm8k", args, router=router, training_updates=training_updates,
-             evaluated_checkpoint=final_checkpoint)
+             evaluated_checkpoint=final_checkpoint, training_samples=training_samples)
