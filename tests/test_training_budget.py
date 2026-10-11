@@ -53,6 +53,26 @@ class TrainingBudgetTests(unittest.TestCase):
                 with patch('sys.argv', [benchmark, '--allow_untrained', '--max_train_samples', '-1']), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                     namespace['parse_args']()
 
+    def test_gsm_initialization_supplies_profiles_to_first_forward_and_keeps_tail_batch(self):
+        tree = ast.parse(Path('Experiments/run_gsm8k.py').read_text())
+        main = next(n for n in tree.body if isinstance(n, ast.If) and '__name__' in ast.unparse(n.test))
+        before_loop = main.body[:next(i for i, n in enumerate(main.body) if isinstance(n, ast.For))]
+        names = {'tasks', 'llms', 'reasonings', 'train_batches'}
+        assignments = [n for n in before_loop if isinstance(n, ast.Assign)
+                       and any(isinstance(t, ast.Name) and t.id in names for t in n.targets)]
+        tasks, llms, reasonings = ['math'], ['local/model'], ['Debate']
+        namespace = dict(tasks_profile=tasks, reasoning_profile=reasonings,
+                         get_llm_profiles=lambda tier: llms, train_dataset=list(range(101)),
+                         args=SimpleNamespace(llm_tier=None, batch_size=16, prompt_file='gsm8k.json'))
+        exec(compile(ast.Module(body=assignments, type_ignores=[]), 'gsm_init', 'exec'), namespace)
+        calls = []
+        namespace.update(queries=['question'], task_labels=[0],
+                         router=SimpleNamespace(forward=lambda *args, **kwargs: calls.append((args, kwargs))))
+        forward = next(n for n in ast.walk(main) if isinstance(n, ast.Call) and ast.unparse(n.func) == 'router.forward')
+        eval(compile(ast.Expression(body=forward), 'gsm_forward', 'eval'), namespace)
+        self.assertEqual(calls[0][0], (['question'], tasks, llms, reasonings, [0]))
+        self.assertEqual(namespace['train_batches'], 7)
+
     def test_exact_global_budget_trims_final_batch(self):
         args = SimpleNamespace(max_train_samples=50)
         sizes, count = [], 0

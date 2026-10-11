@@ -89,11 +89,11 @@ if __name__ == '__main__':
     training_samples = 0
     final_checkpoint = args.checkpoint
     optimizer = torch.optim.Adam(router.parameters(), lr=args.lr)
-    train_batches = (len(train_dataset) + args.batch_size - 1) // args.batch_size
+    tasks = tasks_profile
     reasonings = reasoning_profile
 
     logger.info("Start training...")
-    train_batches = int(len(train_dataset)/args.batch_size)
+    train_batches = (len(train_dataset) + args.batch_size - 1) // args.batch_size
     for epoch in range(args.epochs):
         if training_limit_reached(args, training_samples):
             break
@@ -153,7 +153,6 @@ if __name__ == '__main__':
         logger.info(f"Epoch {epoch} Finishes",80*'-')
         final_checkpoint = f"gsm8k_router_epoch{epoch}_newnew.pth"
         torch.save(router.state_dict(), final_checkpoint)
-        torch.save(router.state_dict(), f"gsm8k_router_epoch{epoch}_newnew.pth")
 
     logger.info("Finish training...")
     
