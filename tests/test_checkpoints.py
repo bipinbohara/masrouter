@@ -110,11 +110,16 @@ class CheckpointTests(unittest.TestCase):
                     'MAR.Utils.utils': SimpleNamespace(fix_random_seed=lambda seed: None),
                     'MAR.Agent.reasoning_profile': SimpleNamespace(reasoning_profile=[]),
                 }), patch('MAR.Experiment.runner.load_benchmark', return_value=Dataset()), \
-                     patch('MAR.Experiment.runner.evaluate', side_effect=evaluate):
+                     patch('MAR.Experiment.runner.evaluate', side_effect=evaluate), \
+                     patch('MAR.Experiment.logging.LOG_DIR', root / 'logs'):
                     run_test(benchmark, args)
                 self.assertEqual(evaluated, [True])
                 metadata = json.loads(Path(args.result_file).read_text())['metadata']
                 self.assertEqual(metadata['evaluation_weights_source'], 'checkpoint_file')
+                log = Path(metadata['log_file']).read_text()
+                self.assertIn('Checkpoint LOADED', log)
+                self.assertIn('TEST START', log)
+                self.assertIn('test accuracy:', log)
                 self.assertEqual(metadata['checkpoint_load']['renamed_encoder_tensors'], 2)
                 self.assertEqual(metadata['checkpoint_sha256'], hashlib.sha256(checkpoint.read_bytes()).hexdigest())
 

@@ -7,6 +7,7 @@ import subprocess
 from uuid import uuid4
 from loguru import logger
 
+from MAR.Experiment.logging import experiment_file_log
 from MAR.Experiment.checkpoints import load_router_checkpoint
 from MAR.Experiment.benchmarks import load_benchmark, score, sha256
 from MAR.Experiment.evaluation import evaluate
@@ -54,6 +55,12 @@ def validate_evaluation_arguments(parser, args, benchmark):
 
 
 def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpoint=None, training_samples=0):
+    with experiment_file_log(benchmark) as log_file:
+        return _run_test(benchmark, args, router, training_updates,
+                         evaluated_checkpoint, training_samples, log_file)
+
+
+def _run_test(benchmark, args, router, training_updates, evaluated_checkpoint, training_samples, log_file):
     import torch
     from MAR.MasRouter.mas_router import MasRouter
     from MAR.LLM.llm_profile import get_llm_profiles
@@ -86,6 +93,7 @@ def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpo
         commit, dirty = None, None
     metadata = {
         'benchmark': benchmark, 'split': 'test', 'protocol': dataset.protocol,
+        'log_file': str(log_file),
         'inactive_test_arguments': ['lr', 'epochs', 'batch_size', 'cost_rate', 'num_rounds', 'decision_method', 'max_train_samples'],
         'started_at': utc_now(), 'arguments': vars(args), 'git_commit': commit, 'git_dirty': dirty,
         'python': platform.python_version(), 'packages': {d.metadata['Name']: d.version for d in distributions()},
@@ -120,5 +128,5 @@ def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpo
     finally:
         metadata['finished_at'] = utc_now()
         writer.finish(status, excel=args.export_excel)
-        print(f'Results saved: {writer.path}')
-    print(f"{benchmark} test accuracy: {writer.report['summary']['accuracy']}")
+        logger.info('Results saved: {}', writer.path)
+    logger.info("{} test accuracy: {}", benchmark, writer.report["summary"]["accuracy"])

@@ -477,3 +477,33 @@ python Experiments/run_gsm8k.py --mode test \
 
 Use fresh output paths on subsequent reruns. Missing files or genuinely
 incompatible architecture/tensor shapes still fail explicitly.
+
+### Test-only log files and full test splits
+
+The shared GSM8K/MATH/MBPP/HumanEval test runner creates a dedicated UTF-8 log
+under `logs/<benchmark>_test_<UTC timestamp>_<unique suffix>.log` before model or
+checkpoint initialization. The terminal prints `Test log file: ...`. It records
+DEBUG agent details, checkpoint loading, test start, per-task progress, result
+paths, final accuracy and startup/runtime failures. The result JSON metadata
+includes `log_file`. Existing training log sinks are retained; the dedicated
+sink is closed when the test ends. MMLU retains its existing timestamped log
+under `logs/`.
+
+Omit `--max_tasks` to evaluate **every record in the test split**. The training
+sample budget does not restrict test coverage. For the standard datasets this
+is 1,319 GSM8K and 14,042 MMLU questions; custom dataset sizes can differ.
+
+```bash
+python Experiments/run_gsm8k.py --mode test \
+  --checkpoint gsm8k_router_epoch0_newnew.pth --seed 1234 \
+  --result_file results/gsm8k/trained_full/experiment.json --export_excel
+
+python Experiments/run_mmlu.py --mode test \
+  --checkpoint mmlu_router_epoch0.pth --seed 1234 \
+  --result_file results/mmlu/trained_full/experiment.json --export_excel
+```
+
+For full untrained controls, replace `--checkpoint <file>` with
+`--allow_untrained` and choose a separate fresh result directory. Full-split runs
+can take substantially longer because every question executes a multi-agent
+system. Results and events continue to be written after each completed task.
