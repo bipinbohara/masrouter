@@ -5,7 +5,9 @@ from pathlib import Path
 import platform
 import subprocess
 from uuid import uuid4
+from loguru import logger
 
+from MAR.Experiment.checkpoints import load_router_checkpoint
 from MAR.Experiment.benchmarks import load_benchmark, score, sha256
 from MAR.Experiment.evaluation import evaluate
 from MAR.Experiment.results import ResultWriter
@@ -63,14 +65,20 @@ def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpo
     dataset = load_benchmark(benchmark, args)
     llms = get_llm_profiles(args.llm_tier)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    checkpoint_load = None
+    supplied_router = router is not None
     if router is None:
         router = MasRouter(max_agent=args.max_agent, device=device).to(device)
         if args.checkpoint:
-            router.load_state_dict(torch.load(args.checkpoint, map_location=device, weights_only=True))
+            checkpoint_load = load_router_checkpoint(router, args.checkpoint, device)
     if not training_updates and not evaluated_checkpoint and not args.checkpoint and not args.allow_untrained:
         raise ValueError('No trained router available; explicitly use --allow_untrained for a baseline')
     router.eval()
     checkpoint = evaluated_checkpoint or args.checkpoint
+    weights_source = ("checkpoint_file" if checkpoint_load else "trained_in_memory" if training_updates
+                      else "provided_router" if supplied_router else "random_initialization")
+    logger.info("TEST START: benchmark={} weights_source={} checkpoint={} training_samples={} updates={}",
+                benchmark, weights_source, checkpoint, training_samples, training_updates)
     try:
         commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
         dirty = bool(subprocess.check_output(['git', 'status', '--porcelain'], text=True).strip())
@@ -84,8 +92,9 @@ def run_test(benchmark, args, router=None, training_updates=0, evaluated_checkpo
         'device': str(device), 'seed': args.seed, 'dataset_size': len(dataset),
         'requested_tasks': min(args.max_tasks or len(dataset), len(dataset)),
         'dataset_sha256': dataset.sources, 'evaluation_order': 'Source file/record order',
-        'checkpoint': checkpoint, 'checkpoint_sha256': sha256(checkpoint) if checkpoint else None,
-        'router_initialization': 'checkpoint' if checkpoint else 'random', 'training_updates': training_updates, 'training_samples': training_samples,
+        'checkpoint': checkpoint, 'checkpoint_sha256': checkpoint_load['sha256'] if checkpoint_load else sha256(checkpoint) if checkpoint else None,
+        'checkpoint_load': checkpoint_load, 'evaluation_weights_source': weights_source,
+        'router_initialization': 'checkpoint' if args.checkpoint else 'random', 'training_updates': training_updates, 'training_samples': training_samples,
         'training_sample_limit': args.max_train_samples,
         'training_grading': 'Same benchmark checker as test; invalid output scores zero; grader exceptions logged',
         'trained_on_separate_data_this_run': training_updates > 0, 'evaluation_batch_size': 1,

@@ -16,6 +16,7 @@ from pathlib import Path
 from importlib.metadata import distributions
 from uuid import uuid4
 
+from MAR.Experiment.checkpoints import load_router_checkpoint
 from MAR.Experiment.training import limit_training_batch, training_limit_reached, grade_training_answer
 from MAR.Experiment.results import ResultWriter
 from MAR.Experiment.mmlu import evaluate
@@ -122,8 +123,9 @@ if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     router = MasRouter(max_agent=args.max_agent, device=device).to(device)
+    checkpoint_load = None
     if args.checkpoint:
-        router.load_state_dict(torch.load(args.checkpoint, map_location=device, weights_only=True))
+        checkpoint_load = load_router_checkpoint(router, args.checkpoint, device)
     optimizer = torch.optim.Adam(router.parameters(), lr=args.lr) if args.mode == 'train-test' else None
     tasks = tasks_profile
     reasonings = reasoning_profile
@@ -138,7 +140,7 @@ if __name__ == '__main__':
             if training_limit_reached(args, training_samples):
                 break
             if i_epoch < args.start_epoch:
-                router.load_state_dict(torch.load(f"mmlu_router_epoch{i_epoch}.pth", map_location=device))
+                checkpoint_load = load_router_checkpoint(router, f"mmlu_router_epoch{i_epoch}.pth", device)
                 final_checkpoint = f"mmlu_router_epoch{i_epoch}.pth"
                 continue
             for i_batch in range(train_batch):
@@ -196,8 +198,11 @@ if __name__ == '__main__':
             logger.info(f"Epoch {i_epoch} Finishes",80*'-')
             final_checkpoint = f"mmlu_router_epoch{i_epoch}.pth"
             torch.save(router.state_dict(), final_checkpoint)
+            logger.info(f"Checkpoint SAVED: {final_checkpoint}; training_samples={training_samples}; updates={training_updates}")
 
     router.eval()
+    weights_source = "trained_in_memory" if training_updates else "checkpoint_file" if checkpoint_load else "random_initialization"
+    logger.info(f"TEST START: benchmark=mmlu weights_source={weights_source} checkpoint={final_checkpoint} training_samples={training_samples} updates={training_updates}")
     if args.mode == 'train-test' and not training_updates and not args.checkpoint and not args.start_epoch and not args.allow_untrained:
         raise ValueError('No training updates occurred; reduce batch_size or explicitly use --allow_untrained')
     result_file = args.result_file or f"results/mmlu/{current_time}_{uuid4().hex[:8]}/experiment.json"
@@ -234,7 +239,9 @@ if __name__ == '__main__':
         'training_grading': 'Same benchmark checker as test; invalid output scores zero; grader exceptions logged',
         'resumed_checkpoint': f'mmlu_router_epoch{args.start_epoch-1}.pth' if args.start_epoch else None,
         'evaluated_checkpoint': final_checkpoint,
-        'evaluated_checkpoint_sha256': digest(final_checkpoint) if final_checkpoint else None,
+        'evaluated_checkpoint_sha256': (checkpoint_load['sha256'] if checkpoint_load and not training_updates
+                                        else digest(final_checkpoint) if final_checkpoint else None),
+        'checkpoint_load': checkpoint_load, 'evaluation_weights_source': weights_source,
         'evaluation_batch_size': 1,
         'timing': 'task_seconds includes routing/embeddings and graph execution; graph_seconds excludes routing',
         'llm_call_count': 'Logical gen/agen invocations including failures and final node; '

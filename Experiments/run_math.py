@@ -25,6 +25,7 @@ from loguru import logger
 from MAR.Experiment.runner import add_evaluation_arguments, validate_evaluation_arguments, run_test
 from MAR.Experiment.benchmarks import read_jsonl, training_jsonl
 
+from MAR.Experiment.checkpoints import load_router_checkpoint
 from MAR.Experiment.training import limit_training_batch, training_limit_reached, grade_training_answer
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -81,7 +82,7 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     router = MasRouter(max_agent=args.max_agent,device=device).to(device)
     if args.checkpoint:
-        router.load_state_dict(torch.load(args.checkpoint, map_location=device, weights_only=True))
+        load_router_checkpoint(router, args.checkpoint, device)
     training_updates = 0
     training_samples = 0
     final_checkpoint = args.checkpoint
@@ -98,8 +99,8 @@ if __name__ == '__main__':
         logger.info(f"Epoch {epoch}",80*'-')
         total_solved, total_executed = (0, 0)
         if epoch < args.start_epoch:
-            router.load_state_dict(torch.load(f"math_router_epoch{epoch}.pth", map_location=device))
-            final_checkpoint = f"math_router_epoch{epoch}.pth"
+            load_router_checkpoint(router, f"math_router_epoch{epoch}_new.pth", device)
+            final_checkpoint = f"math_router_epoch{epoch}_new.pth"
             continue
         for i_batch in range(num_batches):
             logger.info(f"Batch {i_batch}",80*'-')
@@ -152,6 +153,7 @@ if __name__ == '__main__':
             logger.info(f"utilities:{utilities}")
         final_checkpoint = f"math_router_epoch{epoch}_new.pth"
         torch.save(router.state_dict(), final_checkpoint)
+        logger.info(f"Checkpoint SAVED: {final_checkpoint}; training_samples={training_samples}; updates={training_updates}")
     logger.info("Finish training...")
     run_test("math", args, router=router, training_updates=training_updates,
              evaluated_checkpoint=final_checkpoint, training_samples=training_samples)
