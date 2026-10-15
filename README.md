@@ -437,3 +437,43 @@ metadata records this grading protocol: improved grading can change reward
 labels compared with older checkpoints, especially GSM8K and HumanEval.
 A node/tool SyntaxError can still cause the original whole-node retries; answer
 checking does not repair that tool output or prevent its extra LLM calls.
+### Loading checkpoints across Sentence Transformers versions
+
+Some Sentence Transformers releases register the MiniLM backbone under
+`text_encoder.model.0.auto_model.*`; others register the same tensors under
+`text_encoder.model.0.model.*`. Older router checkpoints can therefore fail
+with matching lists of missing and unexpected encoder keys after a dependency
+upgrade, even though the architecture and tensor shapes are compatible.
+
+Every benchmark's test, training-initialization and resume paths now use a
+shared strict checkpoint loader. It translates only this encoder prefix, in
+either direction and only to names present in the target model, preserving
+module metadata. It checks all tensor names/shapes before loading and rejects
+collisions or other incompatibilities. It never uses `strict=False`, silently
+omits weights, falls back to random weights, or rewrites the checkpoint file.
+No retraining is necessary for this namespace-only mismatch.
+
+Successful disk loading prints `Checkpoint LOADED` with the absolute path,
+SHA-256 hash, tensor count, and number of renamed encoder tensors. Metadata
+records these under `checkpoint_load`. `TEST START` and
+`evaluation_weights_source` distinguish `checkpoint_file`, `trained_in_memory`,
+`random_initialization`, and (for shared-runner callers) `provided_router`.
+A `train-test` run saves weights and evaluates the same trained object; it does
+not need to read those weights back from disk. Checkpoint saves now also emit
+an explicit `Checkpoint SAVED` message. Existing model/prompt/routing and
+training-loss behavior is preserved.
+
+To rerun the reported 500-question checkpoint evaluations with existing files:
+
+```bash
+python Experiments/run_mmlu.py --mode test \
+  --checkpoint mmlu_router_epoch0.pth --max_tasks 500 --seed 1234 \
+  --result_file results/mmlu/trained_500_compat/experiment.json --export_excel
+
+python Experiments/run_gsm8k.py --mode test \
+  --checkpoint gsm8k_router_epoch0_newnew.pth --max_tasks 500 --seed 1234 \
+  --result_file results/gsm8k/trained_500_compat/experiment.json --export_excel
+```
+
+Use fresh output paths on subsequent reruns. Missing files or genuinely
+incompatible architecture/tensor shapes still fail explicitly.
