@@ -1,5 +1,6 @@
 """Test evaluation independent of the original router training objective."""
 import time
+from loguru import logger
 from collections import Counter
 from MAR.Experiment.trace import collect_traces, utc_now
 from MAR.Experiment.results import parse_mmlu_answer
@@ -77,6 +78,6 @@ def evaluate(router, dataset, writer, tasks, llms, reasonings, prompt_file, max_
                 record['baseline_calls_if_one_per_worker_round'] = record['num_agents'] * record.get('num_rounds', 0) + 1
                 record['llm_seconds'] = sum(call['seconds'] for call in record['calls'])
                 writer.append(record)
-        print(f"Test {index+1}/{count}: correct={record['correct']} "
+        logger.info(f"Test {index+1}/{count}: correct={record['correct']} "
               f"agents={record['num_agents']} calls={record['total_llm_calls']} "
               f"seconds={record['task_seconds']:.3f}")
