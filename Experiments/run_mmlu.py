@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from MAR.Experiment.checkpoints import load_router_checkpoint
 from MAR.Experiment.training import limit_training_batch, training_limit_reached, grade_training_answer
+from MAR.Experiment.sampling import balanced_mmlu_test
 from MAR.Experiment.results import ResultWriter
 from MAR.Experiment.mmlu import evaluate
 from MAR.Experiment.trace import utc_now
@@ -76,8 +77,11 @@ def parse_args():
     parser.add_argument('--checkpoint', help='Router state_dict to load before evaluation/training')
     parser.add_argument('--allow_untrained', action='store_true',
                         help='Explicitly evaluate random router weights as an untrained baseline')
-    parser.add_argument('--max_tasks', type=int, default=None,
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument('--max_tasks', type=int, default=None,
                         help='Limit test questions; omitted evaluates the entire test split')
+    selection.add_argument('--samples_per_subject', type=int, default=None,
+                           help='Seeded equal-count test sampling; 25 per subject gives 1425 questions for standard MMLU')
     parser.add_argument('--max_train_samples', type=int, default=50,
                         help='Total training examples across epochs; default 50, 0 disables the limit')
     parser.add_argument('--seed', type=int, default=1234)
@@ -87,6 +91,8 @@ def parse_args():
         parser.error('batch_size/max_agent must be positive and epochs nonnegative')
     if args.max_train_samples < 0:
         parser.error('max_train_samples must be nonnegative (0 means unlimited)')
+    if args.samples_per_subject is not None and args.samples_per_subject < 1:
+        parser.error('samples_per_subject must be positive')
     if args.max_tasks is not None and args.max_tasks < 1:
         parser.error('max_tasks must be positive')
     if args.mode == 'test' and not args.checkpoint and not args.allow_untrained:
@@ -120,6 +126,11 @@ if __name__ == '__main__':
 
     dataset_train = MMLUDataset('dev') if args.mode == 'train-test' else None
     dataset_test = MMLUDataset('test')
+    source_dataset_size = len(dataset_test)
+    sampling = None
+    if args.samples_per_subject is not None:
+        dataset_test, sampling = balanced_mmlu_test(dataset_test, args.samples_per_subject, args.seed)
+        logger.info(f"MMLU balanced test selection: subjects={sampling['subject_count']} per_subject={args.samples_per_subject} total={len(dataset_test)} seed={args.seed} selection_sha256={sampling['selection_sha256']}")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     router = MasRouter(max_agent=args.max_agent, device=device).to(device)
@@ -224,7 +235,8 @@ if __name__ == '__main__':
         'python': platform.python_version(), 'device': str(device),
         'packages': {dist.metadata['Name']: dist.version for dist in distributions()},
         'seed': args.seed, 'dataset_shuffle_seed': 888, 'split': 'test',
-        'dataset_size': len(dataset_test),
+        'dataset_size': len(dataset_test), 'source_dataset_size': source_dataset_size,
+        'test_sampling': sampling,
         'requested_tasks': min(args.max_tasks or len(dataset_test), len(dataset_test)),
         'dataset_sha256': {p.name: digest(p) for p in sorted(test_directory.glob('*.csv'))},
         'llm_profiles': llms, 'reasoning_profiles': reasonings,
