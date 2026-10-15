@@ -507,3 +507,45 @@ For full untrained controls, replace `--checkpoint <file>` with
 `--allow_untrained` and choose a separate fresh result directory. Full-split runs
 can take substantially longer because every question executes a multi-agent
 system. Results and events continue to be written after each completed task.
+
+### Balanced MMLU pilot: 1,425 test questions
+
+Use `--samples_per_subject 25` to evaluate 25 questions from each of MMLU's
+57 subjects (1,425 total). This balances the individual subject categories,
+not the four broader discipline groups. Every selected record comes from test;
+no training data is used for selection or evaluation. Sampling is without
+replacement using a stable SHA-256 rank of seed, subject and source identity.
+It does not consume or alter the router's random-number generator. Source input
+ordering does not change the selected identities. Subjects are evaluated in
+round-robin order so completed prefixes stay balanced to within one question.
+
+```bash
+python Experiments/run_mmlu.py --mode test --checkpoint mmlu_router_epoch0.pth \
+  --samples_per_subject 25 --seed 1234 \
+  --result_file results/mmlu/trained_balanced_1425/experiment.json --export_excel
+
+python Experiments/run_mmlu.py --mode test --allow_untrained \
+  --samples_per_subject 25 --seed 1234 \
+  --result_file results/mmlu/untrained_balanced_1425/experiment.json --export_excel
+```
+
+Keep the seed and dataset files unchanged to use identical questions in both
+conditions. `test_sampling` in JSON metadata records all selected task IDs,
+per-subject counts, seed, source/selected sizes and `selection_sha256`. Compare
+that hash between runs to verify identical question selection and order.
+The terminal logs subject count, selected total and selection hash before model
+initialization. An incomplete/custom test directory uses its actual subjects;
+check that the reported count is 57 for the standard benchmark.
+
+The option is mutually exclusive with `--max_tasks`, which would truncate the
+balanced selection. A subject with fewer than the requested count causes an
+explicit error rather than sampling duplicates or silently unbalancing counts.
+Neither option changes the training budget or router. Without either option,
+evaluation still uses the full test split.
+
+Report this as an **equal-subject stratified MMLU test subset**, not full MMLU
+accuracy. With all 25 questions completed for every subject, the pooled accuracy
+also equals the mean of the 57 subject accuracies. Per-subject estimates based
+on 25 questions are coarse (one question is four percentage points). Keep the
+selection fixed before comparing checkpoints rather than choosing a seed from
+the resulting scores. Unique output directories are required on reruns.
