@@ -549,3 +549,48 @@ also equals the mean of the 57 subject accuracies. Per-subject estimates based
 on 25 questions are coarse (one question is four percentage points). Keep the
 selection fixed before comparing checkpoints rather than choosing a seed from
 the resulting scores. Unique output directories are required on reruns.
+
+### Resume an interrupted MMLU test in the same files
+
+MMLU test-only evaluation supports `--resume`. Use the **original** result file,
+seed, test-selection options, model profiles/configuration and checkpoint choice.
+For the interrupted untrained 25-per-subject experiment:
+
+```bash
+python Experiments/run_mmlu.py --mode test --allow_untrained \
+  --samples_per_subject 25 --seed 1234 --resume \
+  --result_file results/mmlu/untrained_balanced_1425/experiment.json \
+  --export_excel
+```
+
+Do not delete the journals or choose a new result path. `experiment.tasks.jsonl`
+is authoritative: saved tasks are validated against the original balanced
+selection and settings, counted once and skipped without new LLM requests.
+The remaining records append to that file; event logs are recovered from task
+records, new events append, and combined summaries/JSON/Excel are regenerated.
+With 1,278 completed records from 1,425 questions, 147 remain. The terminal prints
+`RESUME: saved=1278 remaining=147 ...`.
+
+The command checks dataset fingerprints, seed/selection, model and reasoning
+profiles, endpoints, prompt hash, device, checkpoint hashes and key inference
+package versions. Changes cause an explicit error before modifying existing
+results. The original run metadata is retained; each resume segment is recorded
+in `resume_history` with its code revision, arguments, backup location and counts.
+Original artifacts are copied under `.resume_backups/<timestamp>_<id>/` before
+repair/appending. A process lock prevents two resume invocations writing together;
+stop the original evaluation process before resuming.
+
+An incomplete trailing JSON write can be repaired from its backup. A final task
+explicitly marked `Evaluation interrupted during this task` is retried, so the
+actual remaining count may be one higher than a raw line count suggests. Its
+original partial calls remain in the backup, outside final completed-task totals.
+Ordinary completed task errors are retained as errors and are not silently retried.
+Corruption inside the journal or duplicate/out-of-order identities is rejected.
+
+The original run did not persist per-task RNG state. The resumed process recreates
+the router using the same seed or checkpoint, but stochastic routing restarts
+from that process's RNG sequence. This is a documented resumed experiment, not
+a guarantee of bit-identical continuation of an uninterrupted run. The selected
+questions and saved answers remain unchanged. Keep these segments together when
+reporting results; elapsed run timestamps include downtime, while summed per-task
+timings exclude it. Resume applies only to `--mode test`, not training.

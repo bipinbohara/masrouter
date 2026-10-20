@@ -15,6 +15,9 @@ def evaluate(router, dataset, writer, tasks, llms, reasonings, prompt_file, max_
         row = dataset[index]
         query = dataset.record_to_input(row)['task']
         truth = dataset.record_to_target_answer(row)
+        task_id = str(row.get("task_id", f"test:{row['source_file']}:{int(row['source_row'])}"))
+        if task_id in getattr(writer, 'completed_task_ids', set()):
+            continue
         record = {'task_id': str(row.get("task_id", f"test:{row['source_file']}:{int(row['source_row'])}")),
                   'benchmark': benchmark, 'split': 'test', 'evaluation_index': index, 'subject': row['subject'],
                   'source_file': row['source_file'], 'source_row': int(row['source_row']),
