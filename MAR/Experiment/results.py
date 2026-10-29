@@ -19,20 +19,16 @@ def parse_mmlu_answer(text):
 
 
 class ResultWriter:
-    def __init__(self, result_file, metadata):
+    def __init__(self, result_file, metadata, resume=False):
         self.path = Path(result_file)
         if self.path.suffix.lower() != '.json':
             raise ValueError('result_file must end in .json; Excel is exported alongside it')
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.records_path = self.path.with_suffix('.tasks.jsonl')
-        if self.path.exists() or self.records_path.exists():
-            raise FileExistsError(f'Results already exist: {self.path}; choose a new output path')
         self.metadata = metadata
         self.events_path = self.path.with_suffix('.events.jsonl')
-        if self.events_path.exists():
-            raise FileExistsError(f'Event log already exists: {self.events_path}')
-        self.records_path.touch(exist_ok=False)
-        self.events_path.touch(exist_ok=False)
+        self.completed_task_ids = set()
+        self._resume_lock = None
         self.summary = {'total': 0, 'correct': 0, 'failed': 0, 'invalid_answers': 0,
                         'tasks_with_call_errors': 0, 'failed_llm_calls': 0, 'api_cost_usd': 0.,
                         'total_llm_calls': 0, 'graph_seconds': 0., 'task_seconds': 0.,
@@ -40,17 +36,41 @@ class ResultWriter:
                         'calls_without_usage': 0, 'prompt_tokens': 0, 'completion_tokens': 0}
         self.subjects = defaultdict(lambda: {'total': 0, 'correct': 0})
         self.models = Counter()
-        self._save_sidecars('running')
+        if resume:
+            from MAR.Experiment.resume import restore_writer
+            restore_writer(self, metadata)
+        else:
+            if self.path.exists() or self.records_path.exists() or self.events_path.exists():
+                raise FileExistsError(f'Results already exist: {self.path}; choose a new output path or use resume')
+            self.records_path.touch(exist_ok=False)
+            self.events_path.touch(exist_ok=False)
+        try:
+            self._save_sidecars('running')
+        except BaseException:
+            if self._resume_lock is not None:
+                self._resume_lock.close()
+                self._resume_lock = None
+            raise
 
     def append(self, record):
+        if record['task_id'] in self.completed_task_ids:
+            raise ValueError(f"Task already saved: {record['task_id']}")
         # Close after each task so completed records survive process interruption.
         with self.records_path.open('a', encoding='utf-8') as stream:
             stream.write(json.dumps(record, ensure_ascii=False) + '\n')
             stream.flush()
         with self.events_path.open('a', encoding='utf-8') as stream:
-            entries = [dict(call, event='llm_call') for call in record['calls']] + record.get('events', [])
-            for event in sorted(entries, key=lambda e: e.get('started_at', e.get('timestamp', ''))):
-                stream.write(json.dumps(dict(event, task_id=record['task_id']), ensure_ascii=False) + '\n')
+            self._write_events(record, stream)
+        self._accumulate(record)
+        self._save_sidecars('running')
+
+    def _write_events(self, record, stream):
+        entries = [dict(call, event='llm_call') for call in record['calls']] + record.get('events', [])
+        for event in sorted(entries, key=lambda e: e.get('started_at', e.get('timestamp', ''))):
+            stream.write(json.dumps(dict(event, task_id=record['task_id']), ensure_ascii=False) + '\n')
+
+    def _accumulate(self, record):
+        self.completed_task_ids.add(record['task_id'])
         self.summary['node_execution_errors'] = self.summary.get('node_execution_errors', 0) + record.get('node_execution_errors', 0)
         self.summary['tasks_with_node_errors'] = self.summary.get('tasks_with_node_errors', 0) + int(record.get('node_execution_errors', 0) > 0)
         self.summary['total'] += 1
@@ -78,7 +98,6 @@ class ResultWriter:
             else:
                 for key in ('prompt_tokens', 'completion_tokens'):
                     self.summary[key] += usage.get(key) or 0
-        self._save_sidecars('running')
 
     def _save_sidecars(self, status):
         total = self.summary['total']
@@ -98,19 +117,24 @@ class ResultWriter:
         temporary.replace(target)
 
     def finish(self, status='completed', excel=False):
-        self._save_sidecars(status)
-        temporary = self.path.with_suffix('.tmp')
-        with temporary.open('w', encoding='utf-8') as stream:
-            stream.write(json.dumps(self.report, ensure_ascii=False)[:-1] + ', "tasks": [\n')
-            with self.records_path.open(encoding='utf-8') as source:
-                for index, line in enumerate(source):
-                    if index:
-                        stream.write(',\n')
-                    stream.write(line.strip())
-            stream.write('\n]}\n')
-        temporary.replace(self.path)
-        if excel:
-            self.export_excel()
+        try:
+            self._save_sidecars(status)
+            temporary = self.path.with_suffix('.tmp')
+            with temporary.open('w', encoding='utf-8') as stream:
+                stream.write(json.dumps(self.report, ensure_ascii=False)[:-1] + ', "tasks": [\n')
+                with self.records_path.open(encoding='utf-8') as source:
+                    for index, line in enumerate(source):
+                        if index:
+                            stream.write(',\n')
+                        stream.write(line.strip())
+                stream.write('\n]}\n')
+            temporary.replace(self.path)
+            if excel:
+                self.export_excel()
+        finally:
+            if self._resume_lock is not None:
+                self._resume_lock.close()
+                self._resume_lock = None
 
     def export_excel(self):
         import pandas as pd

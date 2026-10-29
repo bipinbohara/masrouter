@@ -85,8 +85,11 @@ def parse_args():
     parser.add_argument('--max_train_samples', type=int, default=50,
                         help='Total training examples across epochs; default 50, 0 disables the limit')
     parser.add_argument('--seed', type=int, default=1234)
+    parser.add_argument('--resume', action='store_true', help='Append only missing test tasks to an existing result_file')
     parser.add_argument('--export_excel', action='store_true')
     args = parser.parse_args()
+    if args.resume and (args.mode != 'test' or not args.result_file):
+        parser.error('--resume requires --mode test and the original --result_file')
     if args.batch_size < 1 or args.epochs < 0 or args.max_agent < 1:
         parser.error('batch_size/max_agent must be positive and epochs nonnegative')
     if args.max_train_samples < 0:
@@ -260,7 +263,7 @@ if __name__ == '__main__':
                           'local HTTP request counts additionally include SDK retries',
         'cost_note': 'API cost only; local GPU/time cost is not measured',
     }
-    writer = ResultWriter(result_file, metadata)
+    writer = ResultWriter(result_file, metadata, resume=args.resume)
     status = 'completed'
     try:
         with torch.inference_mode():
